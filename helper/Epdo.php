@@ -21,30 +21,6 @@ class Epdo {
         $this->pdo = $pdo;
     }
 
-    /**
-     * insert a new row into the users table
-     * @param type $email
-     * @param type $name
-     * @param type $password
-     * @return the id of the inserted row
-     */
-    public function insertUser($email, $name, $password) {
-        // prepare statement for insert
-        $sql = 'INSERT INTO users(email, name, password) VALUES(:email, :name, :password)';
-        $stmt = $this->pdo->prepare($sql);
-
-        // pass values to the statement
-        $stmt->bindValue(':email', $email);
-        $stmt->bindValue(':name', $name);
-        $stmt->bindValue(':password', $password);
-
-        // execute the insert statement
-        $stmt->execute();
-
-        // return generated id
-        // return $this->pdo->lastInsertId('users_id_seq');
-    }
-
    /**
      * Insert multiple users into the users table
      * @param array $users
@@ -54,48 +30,18 @@ class Epdo {
         $sql = 'INSERT INTO users(email, name, password) VALUES(:email, :name, :password)';
         $stmt = $this->pdo->prepare($sql);
 
+        $cnt = 0;
         $idList = [];
         foreach ($users as $user) {
             $stmt->bindValue(':email', $user['email']);
             $stmt->bindValue(':name', $user['name']);
             $stmt->bindValue(':password', $user['password']);
             $stmt->execute();
+            $cnt = $cnt+$stmt->rowCount();
             // $idList[] = $this->pdo->lastInsertId('users_id_seq');
         }
-        return $idList;
-    }
-
-
-
-    /**
-     * Update User based on the specified email
-     * @param $email
-     * @param $name
-     * @param $password
-     * @param $location
-     * @param $sublocation
-     * @return the number of row affected
-     */
-    public function updateUser($email, $name, $password, $location, $sublocation) {
-
-        // sql statement to update a row in the User table
-        $sql = 'UPDATE users '
-                . 'SET name = :name, password = :password, location = :location, sublocation = :sublocation '
-                . 'WHERE email = :email';
-
-        $stmt = $this->pdo->prepare($sql);
-
-        // bind values to the statement
-        $stmt->bindValue(':email', $email);
-        $stmt->bindValue(':name', $name);
-        $stmt->bindValue(':password', $password);
-        $stmt->bindValue(':location', $location);
-        $stmt->bindValue(':sublocation', $sublocation);
-        // update data in the database
-        $stmt->execute();
-
-        // return the number of row affected
-        return $stmt->rowCount();
+        return $cnt;
+        // return $idList;
     }
 
     /**

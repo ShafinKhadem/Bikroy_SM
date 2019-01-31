@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Post ad Demo</title>
-    <link rel="stylesheet" href="https://cdn.rawgit.com/twbs/bootstrap/v4-dev/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="bootstrap.css">
 </head>
 <body>
 
@@ -24,34 +24,37 @@ try {
     $pdo = Connection::get()->connect();
     $epdo = new Epdo($pdo);
 
+    // $adatrspost = array('0' => 'buy_or_sell', '1' => 'poster_phone', '2' => 'price', '3' => 'is_negotiable', '4' => 'title', '5' => 'details', '6' => 'category', '7' => 'subcategory', '8' => 'location', '9' => 'sublocation');
+    if (isset($_POST['postAd'])) {
+        $tit = str_replace("'", "'__'", $_POST['title']);
+        $det = str_replace("'", "'__'", $_POST['details']);
+        $str = "post_ad('{$_POST['buy_or_sell']}', '{$_POST['poster_phone']}', '{$_POST['price']}', '{$_POST['is_negotiable']}', '{$tit}'
+        , '{$det}', '{$_POST['category']}', '{$_POST['subcategory']}', '{$_POST['location']}', '{$_POST['sublocation']}', '{$_SESSION['email']}')";
+        $str = str_replace("''", "null", $str);
+        $str = str_replace("'__'", "''", $str);
+        // echo $str;
+        $adid = $epdo->getFromWhereVal($str);
+        if ($_POST['category']=='electronics') {
+            $str = "post_electronics_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}')";
+        } elseif ($_POST['subcategory']=='car') {
+            $str = "post_car_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['model_year']}', '{$_POST['condition']}'
+            , '{$_POST['transmission']}', '{$_POST['body_type']}', '{$_POST['fuel_type']}', '{$_POST['engine_capacity']}', '{$_POST['kilometers_run']}')";
+        } elseif ($_POST['subcategory']=='motor_cycle') {
+            $str = "post_motor_cycle_ad('{$adid}', '{$_POST['bike_type']}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['model_year']}', '{$_POST['condition']}'
+            , '{$_POST['engine_capacity']}', '{$_POST['kilometers_run']}')";
+        } elseif ($_POST['subcategory']=='mobile_phone') {
+            $str = "post_mobile_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['features']}', '{$_POST['authenticity']}'
+            , '{$_POST['condition']}')";
+        }
+        if ($_POST['category']!='others') {
+            $str = str_replace("''", "null", $str);
+            // echo $str;
+            $epdo->getFromWhere($str);
+        }
+        header('location: user.php');
+    }
 } catch (\PDOException $e) {
     echo $e->getMessage();
-}
-
-if (isset($_POST['postAd'])) {
-    $str = "post_ad('{$_POST['buy_or_sell']}', '{$_POST['poster_phone']}', '{$_POST['price']}', '{$_POST['is_negotiable']}', '{$_POST['title']}', '{$_POST['details']}
-    ', '{$_POST['category']}', '{$_POST['subcategory']}', '{$_POST['location']}', '{$_POST['sublocation']}', '{$_SESSION['email']}')";
-    $str = str_replace("''", "null", $str);
-    // echo $str;
-    $adid = $epdo->getFromWhereVal($str);
-    if ($_POST['category']=='electronics') {
-        $str = "post_electronics_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}')";
-    } elseif ($_POST['subcategory']=='car') {
-        $str = "post_car_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['model_year']}', '{$_POST['condition']}'
-        , '{$_POST['transmission']}', '{$_POST['body_type']}', '{$_POST['fuel_type']}', '{$_POST['engine_capacity']}', '{$_POST['kilometers_run']}')";
-    } else if ($_POST['subcategory']=='motor_cycle') {
-        $str = "post_motor_cycle_ad('{$adid}', '{$_POST['bike_type']}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['model_year']}', '{$_POST['condition']}'
-        , '{$_POST['engine_capacity']}', '{$_POST['kilometers_run']}')";
-    } else if ($_POST['subcategory']=='mobile_phone') {
-        $str = "post_mobile_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['features']}', '{$_POST['authenticity']}'
-        , '{$_POST['condition']}')";
-    }
-    if ($_POST['category']!='others') {
-        $str = str_replace("''", "null", $str);
-        // echo $str;
-        $epdo->getFromWhere($str);
-    }
-    header('location: user.php');
 }
 
 ?>
@@ -147,10 +150,10 @@ if (isset($_POST['category'])) {
 ?>
         <br><br>
 
-        <input type="submit" name="next" value="next">
+        <input type="submit" class="btn btn-info" name="next" value="next">
 
         <br><br>
-        <input type="submit" name="postAd" value="postAd">
+        <input type="submit" class="btn btn-info" name="postAd" value="postAd">
     </form>
 
 </body>

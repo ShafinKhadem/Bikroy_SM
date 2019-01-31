@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Sign in Demo</title>
-    <link rel="stylesheet" href="https://cdn.rawgit.com/twbs/bootstrap/v4-dev/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="bootstrap.css">
 </head>
 <body>
 
@@ -26,18 +26,17 @@ try {
 
 ?>
 
-<h1><center>User sign in form</center></h1>
-<br>Enter user email and password<br>
+<h1><center>Sign in using email and password</center></h1>
 <br><br>
 <form method="post">
-    <table>
+    <table align="center">
         <tr><td>EMAIL</td>
             <td><input type="text" name="mail"></td></tr>
         <tr><td>PASSWORD</td>
             <td><input type="text" name="pswrd"></td></tr>
         <tr><td>&nbsp;</td><td></td></tr>
         <tr><td></td>
-            <td><input type="submit" name="signin" value="Sign in"></td></tr>
+            <td><input type="submit" class="btn btn-info" name="signin" value="Sign in"></td></tr>
     </table>
 <?php
         if (isset($_POST['signin'])) {

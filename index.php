@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Home page</title>
-    <link rel="stylesheet" href="https://cdn.rawgit.com/twbs/bootstrap/v4-dev/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="bootstrap.css">
 </head>
 <body>
 
@@ -46,14 +46,16 @@ try {
         exit();
         // delete_everything();
     }
+    if (isset($_POST['showAds'])) {
+        header("location: showAds.php");
+        exit();
+        // delete_everything();
+    }
     if (isset($_POST['runTransactionDemo'])) {
         // run transactionDemo() function written in Epdo.php
         $epdo->transactionDemo();
     }
     if (isset($_POST['runFunctionDemo'])) {
-        // run add() in Epdo.php which calls add() in database & directly get_account() in database.
-        // $result = $epdo->add(20, 30);
-        // echo $result;
         $accounts = $epdo->getFromWhere('get_accounts()');
 ?>
 
@@ -110,6 +112,42 @@ try {
 <?php
         exit();
     }
+    if (isset($_POST['runQuery'])) {
+        $rows = $epdo->getQueryResults($_POST['query']);
+        if (!isset($rows[0])) {
+            echo "empty table";
+        } else {
+?>
+
+            <div class="container">
+                <center><h1>result</h1></center>
+                <br><br>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <?php foreach ($rows[0] as $key => $value) : ?>
+                                <th><?php echo "{$key}"; ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($rows as $row) : ?>
+                            <tr>
+                                <?php foreach ($row as $col) : ?>
+                                    <td><?php if (is_bool($col)) var_export($col);    // otherwise boolean false is shown as empty string.
+                                                else echo "{$col}"; ?></td>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+<?php
+        }
+        exit();
+        // delete_everything();
+    }
 } catch (\PDOException $e) {
     echo $e->getMessage();
 }
@@ -118,45 +156,47 @@ try {
 <h1><center>Home page</center></h1>
 <br><br>
 <form method="post">
-    <input type="submit" name="signup" value="Sign up">
+    <input type="submit" class="btn btn-info" name="signup" value="Sign up">
 <?php
 if (isset($_SESSION['email'])) {
-    echo "{$_SESSION['email']}";
+    echo "Signed in with email: {$_SESSION['email']}";
 ?>
-    <input type="submit" name="signout" value="Sign out">
+    <input type="submit" class="btn btn-info" name="signout" value="Sign out">
 <?php
 } else {
 ?>
-    <input type="submit" name="signin" value="Sign in">
+    <input type="submit" class="btn btn-info" name="signin" value="Sign in">
 <?php } ?>
 
-    <input type="submit" name="showUser" value="show ur page">
+    <input type="submit" class="btn btn-info" name="showUser" value="show ur page">
     <br><br>
     <br><br>
 
     <br><br>
-    <input type="submit" name="runTransactionDemo" value="Run transaction demo">
+    <!-- <input type="submit" class="btn btn-info" name="runTransactionDemo" value="Run transaction demo"> -->
 
     <br><br>
-    <input type="submit" name="runFunctionDemo" value="show all (Run function demo)">
+    <input type="submit" class="btn btn-info" name="runFunctionDemo" value="show all accounts">
 
     <br><br>
-    <table>
-        <tr><td>EMAIL</td>
-            <td><input type="text" name="mail3"></td></tr>
-        <tr><td>&nbsp;</td><td></td></tr>
-        <tr><td></td>
-            <td><input type="submit" name="show" value="Show user with this email"></td></tr>
-    </table>
+    <div class="input-group">
+        <div class="input-group-prepend">
+            <span class="input-group-text">@</span>
+        </div>
+        <input type="text" name="mail3" placeholder="email" size="30">
+        <input type="submit" class="btn btn-info" name="show" value="Show user with this email">
+    </div>
 
     <br><br>
-    <table>
-        <tr><td>Ad ID</td>
-            <td><input type="text" name="adid"></td></tr>
-        <tr><td>&nbsp;</td><td></td></tr>
-        <tr><td></td>
-            <td><input type="submit" name="showAd" value="Show ad with this id"></td></tr>
-    </table>
+    <input type="submit" class="btn btn-info" name="showAds" value="show all ads">
+
+    <br><br>
+    <input type="text" name="adid" placeholder="Ad id">
+    <input type="submit" class="btn btn-info" name="showAd" value="Show ad with this id">
+
+    <br><br>
+    Select query: <br><textarea name="query" rows="10" cols="100"></textarea><br>
+    <input type="submit" class="btn btn-info" name="runQuery" value="run query">
 </form>
 </body>
 </html>

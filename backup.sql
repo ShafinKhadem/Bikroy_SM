@@ -46,6 +46,24 @@ CREATE TYPE public.report_type AS ENUM (
 ALTER TYPE public.report_type OWNER TO postgres;
 
 --
+-- Name: approve_ad(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.approve_ad(_ad_id integer, usermail character varying) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+declare
+	cnt int;
+begin
+	update ads set approver_mail=usermail where ad_id=_ad_id and approver_mail is NULL;
+	GET DIAGNOSTICS cnt = ROW_COUNT;
+	return cnt;
+end; $$;
+
+
+ALTER FUNCTION public.approve_ad(_ad_id integer, usermail character varying) OWNER TO postgres;
+
+--
 -- Name: check_ad_type(integer, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -65,6 +83,30 @@ end; $$;
 
 
 ALTER FUNCTION public.check_ad_type(_ad_id integer, _category character varying, _subcategory character varying) OWNER TO postgres;
+
+--
+-- Name: check_edit_access(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.check_edit_access(_ad_id integer, usermail character varying) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+declare
+	cnt int;
+begin
+	if is_admin(usermail) then
+		return 't';
+	end if;
+	select "count"(*) into cnt from ads where ad_id=_ad_id and poster_mail=usermail;
+	if cnt=0 then
+		return 'f';
+	else
+		return 't';
+	end if;
+end; $$;
+
+
+ALTER FUNCTION public.check_edit_access(_ad_id integer, usermail character varying) OWNER TO postgres;
 
 --
 -- Name: delete_ad(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
@@ -496,6 +538,22 @@ end; $$;
 ALTER FUNCTION public.get_accounts() OWNER TO postgres;
 
 --
+-- Name: get_approved_by(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_approved_by(usermail character varying) RETURNS TABLE(ad_id integer, title character varying, poster_mail character varying)
+    LANGUAGE plpgsql
+    AS $$
+begin
+ return query 
+ 
+ select ads.ad_id, ads.title, ads.poster_mail from ads where coalesce(approver_mail,'null')=usermail order by date desc, time desc;
+end; $$;
+
+
+ALTER FUNCTION public.get_approved_by(usermail character varying) OWNER TO postgres;
+
+--
 -- Name: get_car_ad(integer); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -735,6 +793,27 @@ end; $$;
 ALTER FUNCTION public.get_sublocations(_location character varying) OWNER TO postgres;
 
 --
+-- Name: is_admin(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.is_admin(usermail character varying) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+declare
+	cnt int;
+begin
+	select "count"(*) into cnt from users where email=usermail and is_admin='t';
+	if cnt=1 then
+		return 't';
+	else
+		return 'f';
+	end if;
+end; $$;
+
+
+ALTER FUNCTION public.is_admin(usermail character varying) OWNER TO postgres;
+
+--
 -- Name: post_ad(boolean, integer, integer, boolean, character varying, character varying, character varying, character varying, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -744,8 +823,14 @@ CREATE FUNCTION public.post_ad(_buy_or_sell boolean, _poster_phone integer, _pri
 declare
     adid int;
 		cnt int;
+		_approver_mail varchar;
 begin
- insert into ads(buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail) values(_buy_or_sell, _poster_phone, _price, _is_negotiable, _title, _details, _category, _subcategory, _location, _sublocation, _poster_mail) returning ad_id into adid;
+	if is_admin(_poster_mail) then
+		_approver_mail:=_poster_mail;
+	else
+		_approver_mail:=NULL;
+	end if;
+ insert into ads(buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail) values(_buy_or_sell, _poster_phone, _price, _is_negotiable, _title, _details, _category, _subcategory, _location, _sublocation, _poster_mail, _approver_mail) returning ad_id into adid;
  GET DIAGNOSTICS cnt = ROW_COUNT;
  return adid;
 end; $$;
@@ -862,6 +947,21 @@ end; $$;
 ALTER FUNCTION public.send_message(_sender_mail character varying, _receiver_mail character varying, _message character varying) OWNER TO postgres;
 
 --
+-- Name: signup(character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.signup(_email character varying, _name character varying, _password character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$BEGIN
+  INSERT INTO users(email, name, password) VALUES(_email, _name, _password);
+
+END
+$$;
+
+
+ALTER FUNCTION public.signup(_email character varying, _name character varying, _password character varying) OWNER TO postgres;
+
+--
 -- Name: star_ad(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -896,6 +996,21 @@ end; $$;
 
 
 ALTER FUNCTION public.star_remove_ad(_ad_id integer, _email character varying) OWNER TO postgres;
+
+--
+-- Name: update_user(character varying, character varying, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.update_user(_email character varying, _name character varying, _password character varying, _location character varying, _sublocation character varying) RETURNS void
+    LANGUAGE plpgsql
+    AS $$BEGIN
+  -- Routine body goes here...
+	UPDATE users SET name = _name, password = _password, location = _location, sublocation = _sublocation WHERE email = _email;
+END
+$$;
+
+
+ALTER FUNCTION public.update_user(_email character varying, _name character varying, _password character varying, _location character varying, _sublocation character varying) OWNER TO postgres;
 
 --
 -- Name: chats; Type: TABLE; Schema: public; Owner: postgres
@@ -1031,11 +1146,12 @@ ALTER TABLE public.users OWNER TO postgres;
 --
 
 COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, location, sublocation, poster_mail, approver_mail, "time", date) FROM stdin;
-5	f	420	1	f	gari kinum, but taka nai	apni ki apnar shopner gariti harate chan? na harate chaile aji amake diye din.	vehicle	car	Dhaka	Malibagh	admin	\N	02:30:07.811652	2019-01-26
-3	f	0	1	t	demo	demo	mobile	mobile_phone	BUET	CSE	admin	\N	10:09:15.500105	2019-01-24
-1	t	0	10000	f	honda	\N	vehicle	motor_cycle	BUET	CSE	admin2	\N	09:32:48.96786	2019-01-24
-4	t	1	1	t	testing edit_mobile_ad from php	1	mobile	mobile_phone	BUET	CSE	admin2	\N	11:44:10.383567	2019-01-24
-2	t	0	1	t	untitled	testing edit	vehicle	car	BUET	CSE	admin	\N	10:09:15.500105	2019-01-24
+5	f	420	1	f	gari kinum, but taka nai	apni ki apnar shopner gariti harate chan? na harate chaile aji amake diye din.	vehicle	car	Dhaka	Malibagh	admin	admin	02:30:07.811652	2019-01-26
+1	t	0	10000	f	honda	\N	vehicle	motor_cycle	BUET	CSE	admin2	admin2	09:32:48.96786	2019-01-24
+4	t	1	1	t	testing edit_mobile_ad from php	1	mobile	mobile_phone	BUET	CSE	admin2	admin2	11:44:10.383567	2019-01-24
+2	t	0	1	t	untitled	testing edit	vehicle	car	BUET	CSE	admin	admin	10:09:15.500105	2019-01-24
+3	f	0	1	t	demo	demo	mobile	mobile_phone	BUET	CSE	admin	admin	10:09:15.500106	2019-01-24
+6	t	77777777	77777777	f	amar madrider bariti bechte chai	\N	others	others	Dhaka	Jatrabari	cr7@gmail.com	admin2	12:40:30.38054	2019-01-31
 \.
 
 
@@ -1158,11 +1274,11 @@ COPY public.stars (starred_ad_id, starrer_mail, "time", date) FROM stdin;
 --
 
 COPY public.users (email, password, name, is_admin, location, sublocation) FROM stdin;
-admin2	adminMugdho	admin	t	\N	\N
-admin	ki vabsila ami i admin	admin	t	Dhaka	Malibagh
 nazrinshukti	lifeispink	nazrin shukti	f	\N	\N
 lm10@gmail.com	I am the GOAT	lionel messi	f	\N	\N
-cr7@gmail.com	cr7	cristiano ronaldo	f	\N	\N
+cr7@gmail.com	cr7	cristiano ronaldo	f	Dhaka	Jatrabari
+admin2	adminMugdho	admin	t	Dhaka	Jatrabari
+admin	ami i admin	admin	t	BUET	CSE
 \.
 
 
@@ -1170,7 +1286,7 @@ cr7@gmail.com	cr7	cristiano ronaldo	f	\N	\N
 -- Name: ad_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ad_id_seq', 5, true);
+SELECT pg_catalog.setval('public.ad_id_seq', 6, true);
 
 
 --

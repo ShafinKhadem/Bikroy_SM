@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Sign up Demo</title>
-    <link rel="stylesheet" href="https://cdn.rawgit.com/twbs/bootstrap/v4-dev/dist/css/bootstrap.css">
+    <link rel="stylesheet" href="bootstrap.css">
 </head>
 <body>
 
@@ -19,8 +19,8 @@ try {
     // echo 'A connection to the PostgreSQL database server has been established successfully.';
     $epdo = new Epdo($pdo);
 
-    if (isset($_POST['signup']) and isset($_POST['agree']) and !empty($_POST['mail']) and isset($_POST['name']) and strlen($_POST['pswrd'])>=8) {
-        $epdo->insertUser($_POST['mail'], $_POST['name'], $_POST['pswrd']);
+    if (isset($_POST['signup']) and isset($_POST['agree']) and !empty($_POST['mail']) and filter_var($_POST['mail'], FILTER_VALIDATE_EMAIL) and isset($_POST['name']) and strlen($_POST['pswrd'])>=8) {
+        $epdo->getFromWhere("signup('{$_POST['mail']}', '{$_POST['name']}', '{$_POST['pswrd']}')");
         header('location: signin.php');
         exit();
     }
@@ -33,10 +33,9 @@ try {
 
 
 <h1><center>User registration form</center></h1>
-<br>Enter user email, name and password<br>
 <br><br>
 <form method="post">
-    <table>
+    <table align="center">
         <tr><td>EMAIL</td>
             <td><input type="text" name="mail"></td></tr>
         <tr><td>NAME</td>
@@ -72,7 +71,7 @@ try {
         }
         ?>
         <tr><td></td>
-            <td><input type="submit" name="signup" value="Sign up"></td></tr>
+            <td><input type="submit" class="btn btn-info" name="signup" value="Sign up"></td></tr>
     </table>
 </form>
 </body>
