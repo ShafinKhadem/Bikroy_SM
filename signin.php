@@ -39,28 +39,22 @@ try {
             <td><input type="submit" class="btn btn-info" name="signin" value="Sign in"></td></tr>
     </table>
 <?php
-        if (isset($_POST['signin'])) {
-            // retrieves this user from the users table if exists
-            if (empty($_POST['mail'])) {
-        ?>
-                <tr><td></td><td><font color="red">Enter email ID and password which u used for signup.</font></td></tr>
+if (isset($_POST['signin'])) {
+    // retrieves this user from the users table if exists
+    $users = $epdo->getFromWhere("signin('{$_POST['mail']}', '{$_POST['pswrd']}')");
+        // print_r($users);
+    if (count($users)!=1) {
+?>
+        <tr><td></td><td><font color="red">Enter email ID and password which u used for signup.</font></td></tr>
 <?php
-            } else {
-                $users = $epdo->getFromWhere("users where email = '{$_POST['mail']}' and password = '{$_POST['pswrd']}'");
-                // print_r($users);
-                if (count($users)!=1) {
-        ?>
-                <tr><td></td><td><font color="red">Enter email ID and password which u used for signup.</font></td></tr>
-<?php
-                } else {
-                    $_SESSION['email'] = $users[0]['email'];
-                    $_SESSION['name'] = $users[0]['name'];
-                    $_SESSION['password'] = $users[0]['password'];
-                    header('location: user.php');
-                    exit();
-                }
-            }
-        }
+    } else {
+        $_SESSION['email'] = $users[0]['email'];
+        $_SESSION['name'] = $users[0]['name'];
+        $_SESSION['password'] = $users[0]['password'];
+        header('location: user.php');
+        exit();
+    }
+}
 ?>
 </form>
 </body>

@@ -64,6 +64,27 @@ end; $$;
 ALTER FUNCTION public.approve_ad(_ad_id integer, usermail character varying) OWNER TO postgres;
 
 --
+-- Name: check_ad_category(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.check_ad_category(_ad_id integer, _category character varying) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+declare
+	cnt int;
+begin
+	select "count"(*) into cnt from ads where ad_id=_ad_id and category=_category;
+	if cnt=0 then
+		return 'f';
+	else
+		return 't';
+	end if;
+end; $$;
+
+
+ALTER FUNCTION public.check_ad_category(_ad_id integer, _category character varying) OWNER TO postgres;
+
+--
 -- Name: check_ad_type(integer, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -283,22 +304,18 @@ end; $$;
 ALTER FUNCTION public.edit_car_ad(_car_ad public.car_ads_view) OWNER TO postgres;
 
 --
--- Name: mobile_ads; Type: TABLE; Schema: public; Owner: postgres
+-- Name: electronics_ads; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.mobile_ads (
+CREATE TABLE public.electronics_ads (
     brand character varying(255),
     model character varying(255),
-    edition character varying(255),
-    features character varying(1000),
-    authenticity character varying(255),
-    condition character varying(255),
     ad_id integer NOT NULL,
-    CONSTRAINT is_mobile_ad CHECK ((public.check_ad_type(ad_id, 'mobile'::character varying, 'mobile_phone'::character varying) = true))
+    CONSTRAINT is_electronics_ad CHECK ((public.check_ad_category(ad_id, 'electronics'::character varying) = true))
 );
 
 
-ALTER TABLE public.mobile_ads OWNER TO postgres;
+ALTER TABLE public.electronics_ads OWNER TO postgres;
 
 --
 -- Name: electronics_ads_view; Type: VIEW; Schema: public; Owner: postgres
@@ -339,7 +356,7 @@ CREATE VIEW public.electronics_ads_view AS
             ads.date
            FROM public.ads
           WHERE ((ads.category)::text = 'electronics'::text)) l
-     LEFT JOIN public.mobile_ads r ON ((l.ad_id = r.ad_id)));
+     LEFT JOIN public.electronics_ads r ON ((l.ad_id = r.ad_id)));
 
 
 ALTER TABLE public.electronics_ads_view OWNER TO postgres;
@@ -363,6 +380,24 @@ end; $$;
 
 
 ALTER FUNCTION public.edit_electronics_ad(_electronics_ad public.electronics_ads_view) OWNER TO postgres;
+
+--
+-- Name: mobile_ads; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.mobile_ads (
+    brand character varying(255),
+    model character varying(255),
+    edition character varying(255),
+    features character varying(1000),
+    authenticity character varying(255),
+    condition character varying(255),
+    ad_id integer NOT NULL,
+    CONSTRAINT is_mobile_ad CHECK ((public.check_ad_type(ad_id, 'mobile'::character varying, 'mobile_phone'::character varying) = true))
+);
+
+
+ALTER TABLE public.mobile_ads OWNER TO postgres;
 
 --
 -- Name: mobile_ads_view; Type: VIEW; Schema: public; Owner: postgres
@@ -741,6 +776,39 @@ end; $$;
 ALTER FUNCTION public.get_posts(usermail character varying) OWNER TO postgres;
 
 --
+-- Name: get_price(character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_price(_category character varying, _subcategory character varying) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+declare
+	price int;
+begin
+	select ad_price into price from product_type where category=_category and subcategory=_subcategory;
+	return price;
+end; $$;
+
+
+ALTER FUNCTION public.get_price(_category character varying, _subcategory character varying) OWNER TO postgres;
+
+--
+-- Name: get_reporteds(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_reporteds() RETURNS TABLE(ad_id integer, report_cnt bigint)
+    LANGUAGE plpgsql
+    AS $$
+begin
+	return query
+	
+	select reported_ad_id, "count"(*) report_cnt from reports group by reported_ad_id order by report_cnt desc;
+end; $$;
+
+
+ALTER FUNCTION public.get_reporteds() OWNER TO postgres;
+
+--
 -- Name: get_reports(character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -814,6 +882,43 @@ end; $$;
 ALTER FUNCTION public.is_admin(usermail character varying) OWNER TO postgres;
 
 --
+-- Name: pay(integer, integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.pay(_ad_id integer, days integer, _amount integer, _transactionid character varying) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+declare
+	cnt int;
+begin
+ insert into pay_history(ad_id, promoted_days, amount, transaction_id) values(_ad_id, days, _amount, _transactionid);
+ GET DIAGNOSTICS cnt = ROW_COUNT;
+ return cnt;
+end; $$;
+
+
+ALTER FUNCTION public.pay(_ad_id integer, days integer, _amount integer, _transactionid character varying) OWNER TO postgres;
+
+--
+-- Name: pay_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.pay_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+	msg varchar;
+BEGIN
+	msg='payment for ad '||new.ad_id||' with promotion days: '||new.promoted_days;
+  perform send_message('db', 'admin', msg);
+	return new;
+END
+$$;
+
+
+ALTER FUNCTION public.pay_trigger() OWNER TO postgres;
+
+--
 -- Name: post_ad(boolean, integer, integer, boolean, character varying, character varying, character varying, character varying, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -866,7 +971,7 @@ CREATE FUNCTION public.post_electronics_ad(_ad_id integer, _brand character vary
 declare
     cnt int;
 begin
- insert into mobile_ads(brand, model, ad_id) values(_brand, _model, _ad_id);
+ insert into electronics_ads(brand, model, ad_id) values(_brand, _model, _ad_id);
  GET DIAGNOSTICS cnt = ROW_COUNT;
  return cnt;
 end; $$;
@@ -929,6 +1034,25 @@ end; $$;
 ALTER FUNCTION public.report_ad(_ad_id integer, _email character varying, _report_type public.report_type, _message character varying) OWNER TO postgres;
 
 --
+-- Name: report_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.report_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+	msg varchar;
+BEGIN
+	msg='report from '||new.reporter_mail||' on ad '||new.reported_ad_id;
+  perform send_message('db', 'admin', msg);
+	return new;
+END
+$$;
+
+
+ALTER FUNCTION public.report_trigger() OWNER TO postgres;
+
+--
 -- Name: send_message(character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -945,6 +1069,38 @@ end; $$;
 
 
 ALTER FUNCTION public.send_message(_sender_mail character varying, _receiver_mail character varying, _message character varying) OWNER TO postgres;
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.users (
+    email character varying(255) NOT NULL,
+    password character varying(255) NOT NULL,
+    name character varying(255) NOT NULL,
+    is_admin boolean DEFAULT false,
+    location character varying(255),
+    sublocation character varying(255)
+);
+
+
+ALTER TABLE public.users OWNER TO postgres;
+
+--
+-- Name: signin(character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.signin(_email character varying, _password character varying) RETURNS SETOF public.users
+    LANGUAGE plpgsql
+    AS $$
+begin
+ return query 
+ 
+ select * from users where users.email = _email and users."password"=_password;
+end; $$;
+
+
+ALTER FUNCTION public.signin(_email character varying, _password character varying) OWNER TO postgres;
 
 --
 -- Name: signup(character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1028,19 +1184,6 @@ CREATE TABLE public.chats (
 ALTER TABLE public.chats OWNER TO postgres;
 
 --
--- Name: electronics_ads; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.electronics_ads (
-    brand character varying(255),
-    model character varying(255),
-    ad_id integer NOT NULL
-);
-
-
-ALTER TABLE public.electronics_ads OWNER TO postgres;
-
---
 -- Name: locations; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1058,11 +1201,10 @@ ALTER TABLE public.locations OWNER TO postgres;
 
 CREATE TABLE public.pay_history (
     ad_id integer NOT NULL,
-    is_promoted boolean,
+    promoted_days smallint DEFAULT 0,
     amount integer,
-    transaction_id integer NOT NULL,
-    "time" time(6) without time zone DEFAULT CURRENT_TIME NOT NULL,
-    date date DEFAULT CURRENT_DATE NOT NULL
+    transaction_id character varying(32) NOT NULL,
+    "time" timestamp without time zone DEFAULT CURRENT_TIMESTAMP
 );
 
 
@@ -1074,7 +1216,8 @@ ALTER TABLE public.pay_history OWNER TO postgres;
 
 CREATE TABLE public.product_type (
     category character varying(255) NOT NULL,
-    subcategory character varying(255) DEFAULT ''::character varying NOT NULL
+    subcategory character varying(255) DEFAULT ''::character varying NOT NULL,
+    ad_price integer
 );
 
 
@@ -1126,32 +1269,17 @@ CREATE TABLE public.stars (
 ALTER TABLE public.stars OWNER TO postgres;
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.users (
-    email character varying(255) NOT NULL,
-    password character varying(255) NOT NULL,
-    name character varying(255) NOT NULL,
-    is_admin boolean DEFAULT false,
-    location character varying(255),
-    sublocation character varying(255)
-);
-
-
-ALTER TABLE public.users OWNER TO postgres;
-
---
 -- Data for Name: ads; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, location, sublocation, poster_mail, approver_mail, "time", date) FROM stdin;
-5	f	420	1	f	gari kinum, but taka nai	apni ki apnar shopner gariti harate chan? na harate chaile aji amake diye din.	vehicle	car	Dhaka	Malibagh	admin	admin	02:30:07.811652	2019-01-26
+6	t	77777777	77777777	f	amar madrider bariti bechte chai	\N	others	others	Dhaka	Jatrabari	cr7@gmail.com	admin2	12:40:30.38054	2019-01-31
+7	t	5214	121	t	I can't bear with this laptop nemore	\N	electronics	computer	Dhaka	Mirpur	admin	admin	08:59:14.367318	2019-02-02
 1	t	0	10000	f	honda	\N	vehicle	motor_cycle	BUET	CSE	admin2	admin2	09:32:48.96786	2019-01-24
 4	t	1	1	t	testing edit_mobile_ad from php	1	mobile	mobile_phone	BUET	CSE	admin2	admin2	11:44:10.383567	2019-01-24
 2	t	0	1	t	untitled	testing edit	vehicle	car	BUET	CSE	admin	admin	10:09:15.500105	2019-01-24
 3	f	0	1	t	demo	demo	mobile	mobile_phone	BUET	CSE	admin	admin	10:09:15.500106	2019-01-24
-6	t	77777777	77777777	f	amar madrider bariti bechte chai	\N	others	others	Dhaka	Jatrabari	cr7@gmail.com	admin2	12:40:30.38054	2019-01-31
+5	f	420	1	f	I don't have money.	Apni ki apnar gariti harate chan? na chaile aji amake diye din. I don't have money, but I have guns.	vehicle	car	Dhaka	Malibagh	admin	admin	02:30:07.811652	2019-01-26
 \.
 
 
@@ -1160,8 +1288,8 @@ COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, 
 --
 
 COPY public.car_ads (brand, model, edition, model_year, condition, transmission, body_type, fuel_type, engine_capacity, kilometers_run, ad_id) FROM stdin;
-Allah Hafej	2	3	4	5	6	7	8	9	10	5
 toyota	corolla	2011	2010	vanga	manual	plastic	kerosine	0	100000	2
+Allah Hafej	2	3	4	5	6	7	8	9	10	5
 \.
 
 
@@ -1179,6 +1307,10 @@ admin	admin2	doesnot work if use some punctuations	11:20:07.664005	2019-01-25
 admin	admin2	let's check apostrophe	13:28:05.727881	2019-01-25
 admin	admin2	let's check other genjaimma punctuations: !@#$%^&*()_-+={[]};:'",<.>/?`~...	13:30:31.039192	2019-01-25
 admin	admin2	hello tasin	05:07:05.533315	2019-01-26
+db	admin	report from lm10@gmail.com on ad 3	19:32:14.188622	2019-02-03
+db	admin	report from lm10@gmail.com on ad 7	11:26:11.989576	2019-02-03
+db	admin	payment for ad 6 with promotion days: 15	19:36:40.279841	2019-02-03
+db	admin	payment for ad 7 with promotion days: 7	22:26:06.095645	2019-02-03
 \.
 
 
@@ -1187,6 +1319,7 @@ admin	admin2	hello tasin	05:07:05.533315	2019-01-26
 --
 
 COPY public.electronics_ads (brand, model, ad_id) FROM stdin;
+dell	inspiron n405	7
 \.
 
 
@@ -1227,7 +1360,9 @@ honda	honda	honda	1500	vanga	0	1000000	1
 -- Data for Name: pay_history; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.pay_history (ad_id, is_promoted, amount, transaction_id, "time", date) FROM stdin;
+COPY public.pay_history (ad_id, promoted_days, amount, transaction_id, "time") FROM stdin;
+6	15	1500	hudai	2019-02-03 21:15:14.085957
+7	7	700	shudhu shudhu pechal	2019-02-03 22:26:06.095645
 \.
 
 
@@ -1235,15 +1370,15 @@ COPY public.pay_history (ad_id, is_promoted, amount, transaction_id, "time", dat
 -- Data for Name: product_type; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.product_type (category, subcategory) FROM stdin;
-vehicle	motor_cycle
-vehicle	car
-mobile	mobile_phone
-electronics	computer
-electronics	computer accessories
-electronics	tv
-electronics	others
-others	others
+COPY public.product_type (category, subcategory, ad_price) FROM stdin;
+vehicle	motor_cycle	500
+vehicle	car	1000
+mobile	mobile_phone	100
+electronics	computer	200
+electronics	computer accessories	50
+electronics	tv	150
+electronics	others	50
+others	others	25
 \.
 
 
@@ -1255,6 +1390,8 @@ COPY public.reports (report_id, report_type, message, reporter_mail, reported_ad
 1	spam	faltu ad	admin	4	08:21:02.658913	2019-01-25
 3	wrong category	sorry, just testing wrong category type.	admin	1	15:04:58.014406	2019-01-25
 2	fraud	report my own ad XD to test punctuations: !@#$%^&*()_-+={[]};:'",<.>/?`~....	admin	3	13:32:32.438136	2019-01-25
+4	fraud	I don't care	lm10@gmail.com	7	11:26:11.989576	2019-02-03
+5	wrong category	sorry, just testing	lm10@gmail.com	3	19:32:14.188622	2019-02-03
 \.
 
 
@@ -1279,6 +1416,7 @@ lm10@gmail.com	I am the GOAT	lionel messi	f	\N	\N
 cr7@gmail.com	cr7	cristiano ronaldo	f	Dhaka	Jatrabari
 admin2	adminMugdho	admin	t	Dhaka	Jatrabari
 admin	ami i admin	admin	t	BUET	CSE
+db	ami i database	database itself	t	BUET	CSE
 \.
 
 
@@ -1286,14 +1424,14 @@ admin	ami i admin	admin	t	BUET	CSE
 -- Name: ad_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ad_id_seq', 6, true);
+SELECT pg_catalog.setval('public.ad_id_seq', 7, true);
 
 
 --
 -- Name: report_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.report_id_seq', 3, true);
+SELECT pg_catalog.setval('public.report_id_seq', 5, true);
 
 
 --
@@ -1385,6 +1523,20 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: pay_history pay_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER pay_trigger AFTER INSERT ON public.pay_history FOR EACH ROW EXECUTE PROCEDURE public.pay_trigger();
+
+
+--
+-- Name: reports report_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER report_trigger AFTER INSERT ON public.reports FOR EACH ROW EXECUTE PROCEDURE public.report_trigger();
+
+
+--
 -- Name: ads ads_approver_mail_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1462,6 +1614,14 @@ ALTER TABLE ONLY public.mobile_ads
 
 ALTER TABLE ONLY public.motor_cycle_ads
     ADD CONSTRAINT motor_cycle_ads_ad_id_fkey FOREIGN KEY (ad_id) REFERENCES public.ads(ad_id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: pay_history pay_history_ad_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.pay_history
+    ADD CONSTRAINT pay_history_ad_id_fkey FOREIGN KEY (ad_id) REFERENCES public.ads(ad_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 --

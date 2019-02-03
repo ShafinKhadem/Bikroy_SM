@@ -130,13 +130,11 @@ if ($isAdmin) {
                 <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
 
-    <br><br>
-    <br><br>
+        <br><br>
+        <br><br>
 
-    <div class="container">
-        <center><h1><font color="red">Ads waiting approval ⚠</font></h1></center>
+        <center><h1><font color="red">Ads waiting approval 😋</font></h1></center>
         <br><br>
         <table class="table table-bordered">
             <thead>
@@ -157,7 +155,31 @@ if ($isAdmin) {
                 <?php endforeach; ?>
             </tbody>
         </table>
+
+        <br><br>
+        <br><br>
+
+        <center><h1><font color="red">Most reported ads ⚠</font></h1></center>
+        <br><br>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>ad_id</th>
+                    <th>report_cnt</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php $mostReporteds = $epdo->getFromWhere("get_reporteds()"); ?>
+                <?php foreach ($mostReporteds as $mostReported) : ?>
+                    <tr>
+                        <td><a href="showAd.php?adid=<?php echo($mostReported['ad_id']); ?>"><?php echo "{$mostReported['ad_id']}"; ?></a></td>
+                        <td><?php echo $mostReported['report_cnt']; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
     </div>
+
 
 <?php
 }
@@ -189,12 +211,10 @@ if ($isAdmin) {
                 <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
 
-    <br><br>
-    <br><br>
+        <br><br>
+        <br><br>
 
-    <div class="container">
         <center><h1><font color="yellow">Your posted ads 🙂</font></h1></center>
         <br><br>
         <table class="table table-bordered">
@@ -217,12 +237,10 @@ if ($isAdmin) {
                 <?php endforeach; ?>
             </tbody>
         </table>
-    </div>
 
-    <br><br>
-    <br><br>
+        <br><br>
+        <br><br>
 
-    <div class="container">
         <center><h1><font color="red">Your reported ads 😠</font></h1></center>
         <br><br>
         <table class="table table-bordered">

@@ -45,6 +45,9 @@ try {
         header("location: showAd.php?adid=".$_POST['adid']);
         exit();
         // delete_everything();
+    } elseif (isset($_POST['promoteAd'])) {
+        $epdo->getFromWhere("pay({$_POST['adid']}, {$_POST['promoteDays']}, {$_POST['amount']}, '{$_POST['transactionid']}')");
+        // delete_everything();
     }
     if (isset($_POST['showAds'])) {
         header("location: showAds.php");
@@ -193,6 +196,10 @@ if (isset($_SESSION['email'])) {
     <br><br>
     <input type="text" name="adid" placeholder="Ad id">
     <input type="submit" class="btn btn-info" name="showAd" value="Show ad with this id">
+    <br>promoteDays: <input type="text" name="promoteDays">
+    <br>amount: <input type="text" name="amount">
+    <br>transactionid: <input type="text" name="transactionid">
+    <input type="submit" class="btn btn-info" name="promoteAd" value="Promote ad with this id">
 
     <br><br>
     Select query: <br><textarea name="query" rows="10" cols="100"></textarea><br>

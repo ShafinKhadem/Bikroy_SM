@@ -17,7 +17,7 @@ try {
     $pdo = Connection::get()->connect();
     $epdo = new Epdo($pdo);
     $str = "ads where approver_mail is not null";
-    if ((isset($_POST['location']) and $_POST['location']!='any') or (isset($_POST['category']) and $_POST['location']!='any')) {
+    if ((isset($_POST['location']) and $_POST['location']!='any') or (isset($_POST['category']) and $_POST['category']!='any')) {
         if (isset($_POST['location']) and $_POST['location']!='any') {
             $str = $str.' and ';
             $str = $str."location='{$_POST['location']}'";
@@ -35,10 +35,15 @@ try {
             $str = $str."subcategory='{$_POST['subcategory']}'";
         }
     }
+    $str2 = "(select * from ".$str.") l join (select distinct ad_id from pay_history where CURRENT_TIMESTAMP-pay_history.\"time\"<\"interval\"(pay_history.promoted_days||' day')) r on (l.ad_id=r.ad_id)"." order by random() limit 2";
     if (isset($_POST['sort']) and $_POST['sort']!='random') {
         $str = $str." order by {$_POST['sort']}";
     }
+
+    // echo $str;
+    // echo htmlspecialchars($str2);
     $ads = $epdo->getFromWhere($str);
+    $topads = $epdo->getFromWhere($str2);
     // var_dump($ads);
 } catch (\PDOException $e) {
     echo $e->getMessage();
@@ -118,11 +123,21 @@ if (isset($_POST['category'])) {
 ?>
 
     <br><br>
-    <input type="submit" name="showAds" value="show ads">
+    <input type="submit" class="btn btn-info" name="showAds" value="show ads">
 </form>
 
 <br><br>
 
+top ads:<br>
+<?php
+foreach ($topads as $ad) {
+?>
+    <a href="showAd.php?adid=<?php echo($ad['ad_id']); ?>">id: <?php echo "{$ad['ad_id']}"; ?>, title: <?php echo "{$ad['title']}"; ?></a>
+    <br>
+<?php
+}
+?>
+<br><br>ads:<br>
 <?php
 foreach ($ads as $ad) {
 ?>
