@@ -24,6 +24,8 @@ try {
     $pdo = Connection::get()->connect();
     $epdo = new Epdo($pdo);
     $isAdmin = $epdo->getFromWhereVal("is_admin('{$_SESSION['email']}')");
+    $str = "get_received_messages('{$_SESSION['email']}')";
+    $notifications = $epdo->getFromWhere($str);
     $str = "get_favorites('{$_SESSION['email']}')";
     $favorites = $epdo->getFromWhere($str);
     $str = "get_posts('{$_SESSION['email']}')";
@@ -54,7 +56,7 @@ try {
         header("Refresh:0");
     } else if (isset($_POST['reportAd'])) {
         if (isset($_POST['reportType'])) {
-            $epdo->getFromWhere("report_ad({$_POST['adid']}, '{$_SESSION['email']}', '{$_POST['reportType']}', ".str_replace("'", "''", $_POST['messageReport']).'\')');
+            $epdo->getFromWhere("report_ad({$_POST['adid']}, '{$_SESSION['email']}', '{$_POST['reportType']}', '".str_replace("'", "''", $_POST['messageReport']).'\')');
             header("Refresh:0");
         } else {
             echo "report type is must";
@@ -68,7 +70,7 @@ try {
 }
 
 if (isset($_POST['sendMessage'])) {
-    $epdo->getFromWhere("send_message('{$_SESSION['email']}', '{$_POST['mail']}', ".str_replace("'", "''", $_POST['messageUser']).'\')');
+    $epdo->getFromWhere("send_message('{$_SESSION['email']}', '{$_POST['mail']}', '".str_replace("'", "''", $_POST['messageUser']).'\')');
 } elseif (isset($_POST['showChats'])) {
     $str = "get_chats('{$_SESSION['email']}', '{$_POST['mail']}')";
     $chats = $epdo->getFromWhere($str);
@@ -189,6 +191,29 @@ if ($isAdmin) {
     <br><br>
 
     <div class="container">
+        <center><h1><font color="blue">Your notifications 🔔</font></h1></center>
+        <br><br>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>notification</th>
+                    <th>time</th>
+                    <th>date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($notifications as $chat) : ?>
+                    <tr>
+                        <td><?php echo "message from {$chat['sender_mail']}: {$chat['message']}"; ?></td>
+                        <td><?php echo $chat['time']; ?></td>
+                        <td><?php echo $chat['date']; ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <br><br>
+        <br><br>
         <center><h1><font color="green">Your favorite ads 💜</font></h1></center>
         <br><br>
         <table class="table table-bordered">

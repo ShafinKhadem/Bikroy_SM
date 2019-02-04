@@ -64,6 +64,26 @@ end; $$;
 ALTER FUNCTION public.approve_ad(_ad_id integer, usermail character varying) OWNER TO postgres;
 
 --
+-- Name: approve_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.approve_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+	msg varchar;
+	price int;
+BEGIN
+	msg='ur ad with id '||new.ad_id||' has been approved by '||new.approver_mail;
+  perform send_message('bikroy.com', new.poster_mail, msg);
+	return new;
+END
+$$;
+
+
+ALTER FUNCTION public.approve_trigger() OWNER TO postgres;
+
+--
 -- Name: check_ad_category(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -172,7 +192,7 @@ SET default_with_oids = false;
 CREATE TABLE public.ads (
     ad_id integer DEFAULT nextval('public.ad_id_seq'::regclass) NOT NULL,
     buy_or_sell boolean NOT NULL,
-    poster_phone integer,
+    poster_phone character varying(15),
     price integer,
     is_negotiable boolean,
     title character varying(255) NOT NULL,
@@ -793,6 +813,24 @@ end; $$;
 ALTER FUNCTION public.get_price(_category character varying, _subcategory character varying) OWNER TO postgres;
 
 --
+-- Name: get_received_messages(character varying); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.get_received_messages(usermail character varying) RETURNS TABLE(sender_mail character varying, message character varying, "time" time without time zone, date date)
+    LANGUAGE plpgsql
+    AS $$
+begin
+ return query
+ 
+ select chats.sender_mail, chats.message, chats."time", chats."date" from chats where 
+ chats.receiver_mail=usermail
+ order by chats."date" desc, chats."time" desc;
+end; $$;
+
+
+ALTER FUNCTION public.get_received_messages(usermail character varying) OWNER TO postgres;
+
+--
 -- Name: get_reporteds(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -907,10 +945,14 @@ CREATE FUNCTION public.pay_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 DECLARE
+	var record;
 	msg varchar;
 BEGIN
 	msg='payment for ad '||new.ad_id||' with promotion days: '||new.promoted_days;
-  perform send_message('db', 'admin', msg);
+	for var in (select email from users where is_admin='t')
+	loop
+		perform send_message('bikroy.com', var.email, msg);
+	end loop;
 	return new;
 END
 $$;
@@ -919,10 +961,10 @@ $$;
 ALTER FUNCTION public.pay_trigger() OWNER TO postgres;
 
 --
--- Name: post_ad(boolean, integer, integer, boolean, character varying, character varying, character varying, character varying, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: post_ad(boolean, character varying, integer, boolean, character varying, character varying, character varying, character varying, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.post_ad(_buy_or_sell boolean, _poster_phone integer, _price integer, _is_negotiable boolean, _title character varying, _details character varying, _category character varying, _subcategory character varying, _location character varying, _sublocation character varying, _poster_mail character varying) RETURNS integer
+CREATE FUNCTION public.post_ad(_buy_or_sell boolean, _poster_phone character varying, _price integer, _is_negotiable boolean, _title character varying, _details character varying, _category character varying, _subcategory character varying, _location character varying, _sublocation character varying, _poster_mail character varying) RETURNS integer
     LANGUAGE plpgsql
     AS $$
 declare
@@ -941,7 +983,7 @@ begin
 end; $$;
 
 
-ALTER FUNCTION public.post_ad(_buy_or_sell boolean, _poster_phone integer, _price integer, _is_negotiable boolean, _title character varying, _details character varying, _category character varying, _subcategory character varying, _location character varying, _sublocation character varying, _poster_mail character varying) OWNER TO postgres;
+ALTER FUNCTION public.post_ad(_buy_or_sell boolean, _poster_phone character varying, _price integer, _is_negotiable boolean, _title character varying, _details character varying, _category character varying, _subcategory character varying, _location character varying, _sublocation character varying, _poster_mail character varying) OWNER TO postgres;
 
 --
 -- Name: post_car_ad(integer, character varying, character varying, character varying, character varying, character varying, character varying, character varying, character varying, integer, real); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1016,6 +1058,27 @@ end; $$;
 ALTER FUNCTION public.post_motor_cycle_ad(_ad_id integer, _bike_type character varying, _brand character varying, _model character varying, _model_year integer, _condition character varying, _engine_capacity integer, _kilometers_run real) OWNER TO postgres;
 
 --
+-- Name: post_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.post_trigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+	msg varchar;
+	price int;
+BEGIN
+	select ad_price into price from product_type where category=new.category and subcategory=new.subcategory;
+	msg='ur ad is pending for admin approval, u need to first pay '||price||'. ur ad id is '||new.ad_id;
+  perform send_message('bikroy.com', new.poster_mail, msg);
+	return new;
+END
+$$;
+
+
+ALTER FUNCTION public.post_trigger() OWNER TO postgres;
+
+--
 -- Name: report_ad(integer, character varying, public.report_type, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -1041,10 +1104,14 @@ CREATE FUNCTION public.report_trigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 DECLARE
+	var record;
 	msg varchar;
 BEGIN
-	msg='report from '||new.reporter_mail||' on ad '||new.reported_ad_id;
-  perform send_message('db', 'admin', msg);
+	msg='report from '||new.reporter_mail||' on ad '||new.reported_ad_id||' as '||new.report_type||' with message: '||new.message;
+  for var in (select email from users where is_admin='t')
+	loop
+		perform send_message('bikroy.com', var.email, msg);
+	end loop;
 	return new;
 END
 $$;
@@ -1217,7 +1284,7 @@ ALTER TABLE public.pay_history OWNER TO postgres;
 CREATE TABLE public.product_type (
     category character varying(255) NOT NULL,
     subcategory character varying(255) DEFAULT ''::character varying NOT NULL,
-    ad_price integer
+    ad_price integer DEFAULT 0
 );
 
 
@@ -1275,11 +1342,13 @@ ALTER TABLE public.stars OWNER TO postgres;
 COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, location, sublocation, poster_mail, approver_mail, "time", date) FROM stdin;
 6	t	77777777	77777777	f	amar madrider bariti bechte chai	\N	others	others	Dhaka	Jatrabari	cr7@gmail.com	admin2	12:40:30.38054	2019-01-31
 7	t	5214	121	t	I can't bear with this laptop nemore	\N	electronics	computer	Dhaka	Mirpur	admin	admin	08:59:14.367318	2019-02-02
+8	f	101010	101010	t	world cup kinte chai	I am the GOAT but some don't admit as I  haven't got a world cup.	others	others	Dhaka	Mirpur	lm10@gmail.com	admin	19:36:12.101678	2019-02-04
 1	t	0	10000	f	honda	\N	vehicle	motor_cycle	BUET	CSE	admin2	admin2	09:32:48.96786	2019-01-24
 4	t	1	1	t	testing edit_mobile_ad from php	1	mobile	mobile_phone	BUET	CSE	admin2	admin2	11:44:10.383567	2019-01-24
 2	t	0	1	t	untitled	testing edit	vehicle	car	BUET	CSE	admin	admin	10:09:15.500105	2019-01-24
 3	f	0	1	t	demo	demo	mobile	mobile_phone	BUET	CSE	admin	admin	10:09:15.500106	2019-01-24
 5	f	420	1	f	I don't have money.	Apni ki apnar gariti harate chan? na chaile aji amake diye din. I don't have money, but I have guns.	vehicle	car	Dhaka	Malibagh	admin	admin	02:30:07.811652	2019-01-26
+9	t	01777777777	777777777	t	amar bugatti veyron bechte chai, prapto taka dan kore dewa hobe.	becha hobe kind of bidding er madhyome, bidding onushthito hobe juventus stadium e.	vehicle	car	Dhaka	Jatrabari	cr7@gmail.com	admin	18:45:43.864541	2019-02-05
 \.
 
 
@@ -1290,6 +1359,7 @@ COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, 
 COPY public.car_ads (brand, model, edition, model_year, condition, transmission, body_type, fuel_type, engine_capacity, kilometers_run, ad_id) FROM stdin;
 toyota	corolla	2011	2010	vanga	manual	plastic	kerosine	0	100000	2
 Allah Hafej	2	3	4	5	6	7	8	9	10	5
+Bugatti	Veyron	Deluxe	2015	brand new	automatic	stainless steel	octen	3500	1000	9
 \.
 
 
@@ -1307,10 +1377,28 @@ admin	admin2	doesnot work if use some punctuations	11:20:07.664005	2019-01-25
 admin	admin2	let's check apostrophe	13:28:05.727881	2019-01-25
 admin	admin2	let's check other genjaimma punctuations: !@#$%^&*()_-+={[]};:'",<.>/?`~...	13:30:31.039192	2019-01-25
 admin	admin2	hello tasin	05:07:05.533315	2019-01-26
-db	admin	report from lm10@gmail.com on ad 3	19:32:14.188622	2019-02-03
-db	admin	report from lm10@gmail.com on ad 7	11:26:11.989576	2019-02-03
-db	admin	payment for ad 6 with promotion days: 15	19:36:40.279841	2019-02-03
-db	admin	payment for ad 7 with promotion days: 7	22:26:06.095645	2019-02-03
+bikroy.com	admin	report from lm10@gmail.com on ad 3	19:32:14.188622	2019-02-03
+bikroy.com	admin	report from lm10@gmail.com on ad 7	11:26:11.989576	2019-02-03
+bikroy.com	admin	payment for ad 6 with promotion days: 15	19:36:40.279841	2019-02-03
+bikroy.com	admin	payment for ad 7 with promotion days: 7	22:26:06.095645	2019-02-03
+bikroy.com	lm10@gmail.com	ur ad is pending for admin approval, u need to first pay 25. ur ad id is 8	19:36:12.101678	2019-02-04
+bikroy.com	admin	payment for ad 8 with promotion days: 0	19:38:26.337356	2019-02-04
+bikroy.com	lm10@gmail.com	ur ad with id 8 has been approved by admin	19:39:30.280013	2019-02-04
+bikroy.com	admin2	report from cr7@gmail.com on ad 8	20:12:05.118047	2019-02-04
+bikroy.com	admin	report from cr7@gmail.com on ad 8	20:12:05.118047	2019-02-04
+bikroy.com	bikroy.com	report from cr7@gmail.com on ad 8	20:12:05.118047	2019-02-04
+cr7@gmail.com	lm10@gmail.com	How dare u report me? I have taken revenge by report u XD.	20:12:40.341061	2019-02-04
+bikroy.com	admin2	report from cr7@gmail.com on ad 4 as other with message ballon d or painai dekhe mood kharap.	20:21:41.596019	2019-02-04
+bikroy.com	admin	report from cr7@gmail.com on ad 4 as other with message ballon d or painai dekhe mood kharap.	20:21:41.596019	2019-02-04
+bikroy.com	bikroy.com	report from cr7@gmail.com on ad 4 as other with message ballon d or painai dekhe mood kharap.	20:21:41.596019	2019-02-04
+bikroy.com	cr7@gmail.com	ur ad is pending for admin approval, u need to first pay 1000. ur ad id is 9	18:45:43.864541	2019-02-05
+bikroy.com	admin2	payment for ad 9 with promotion days: 0	18:46:50.20875	2019-02-05
+bikroy.com	admin	payment for ad 9 with promotion days: 0	18:46:50.20875	2019-02-05
+bikroy.com	bikroy.com	payment for ad 9 with promotion days: 0	18:46:50.20875	2019-02-05
+bikroy.com	cr7@gmail.com	ur ad with id 9 has been approved by admin	18:47:19.867476	2019-02-05
+bikroy.com	admin2	payment for ad 9 with promotion days: 15	18:50:19.297111	2019-02-05
+bikroy.com	admin	payment for ad 9 with promotion days: 15	18:50:19.297111	2019-02-05
+bikroy.com	bikroy.com	payment for ad 9 with promotion days: 15	18:50:19.297111	2019-02-05
 \.
 
 
@@ -1363,6 +1451,9 @@ honda	honda	honda	1500	vanga	0	1000000	1
 COPY public.pay_history (ad_id, promoted_days, amount, transaction_id, "time") FROM stdin;
 6	15	1500	hudai	2019-02-03 21:15:14.085957
 7	7	700	shudhu shudhu pechal	2019-02-03 22:26:06.095645
+8	0	25	again vejal	2019-02-04 19:38:26.337356
+9	0	1000	ami i shera	2019-02-05 18:46:50.20875
+9	15	1500	I am the best	2019-02-05 18:50:19.297111
 \.
 
 
@@ -1392,6 +1483,8 @@ COPY public.reports (report_id, report_type, message, reporter_mail, reported_ad
 2	fraud	report my own ad XD to test punctuations: !@#$%^&*()_-+={[]};:'",<.>/?`~....	admin	3	13:32:32.438136	2019-01-25
 4	fraud	I don't care	lm10@gmail.com	7	11:26:11.989576	2019-02-03
 5	wrong category	sorry, just testing	lm10@gmail.com	3	19:32:14.188622	2019-02-03
+6	fraud	as messi has reported me, I must also report him.	cr7@gmail.com	8	20:12:05.118047	2019-02-04
+7	other	ballon d or painai dekhe mood kharap.	cr7@gmail.com	4	20:21:41.596019	2019-02-04
 \.
 
 
@@ -1403,6 +1496,7 @@ COPY public.stars (starred_ad_id, starrer_mail, "time", date) FROM stdin;
 4	admin	10:14:31.596875	2019-01-25
 2	admin2	20:56:41.668591	2019-01-24
 3	admin	07:51:13.063194	2019-01-24
+9	cr7@gmail.com	18:48:02.190838	2019-02-05
 \.
 
 
@@ -1412,11 +1506,11 @@ COPY public.stars (starred_ad_id, starrer_mail, "time", date) FROM stdin;
 
 COPY public.users (email, password, name, is_admin, location, sublocation) FROM stdin;
 nazrinshukti	lifeispink	nazrin shukti	f	\N	\N
-lm10@gmail.com	I am the GOAT	lionel messi	f	\N	\N
 cr7@gmail.com	cr7	cristiano ronaldo	f	Dhaka	Jatrabari
 admin2	adminMugdho	admin	t	Dhaka	Jatrabari
 admin	ami i admin	admin	t	BUET	CSE
-db	ami i database	database itself	t	BUET	CSE
+bikroy.com	ami i database	database itself	t	BUET	CSE
+lm10@gmail.com	I am the GOAT	lionel messi	f	Dhaka	Mirpur
 \.
 
 
@@ -1424,14 +1518,14 @@ db	ami i database	database itself	t	BUET	CSE
 -- Name: ad_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ad_id_seq', 7, true);
+SELECT pg_catalog.setval('public.ad_id_seq', 9, true);
 
 
 --
 -- Name: report_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.report_id_seq', 5, true);
+SELECT pg_catalog.setval('public.report_id_seq', 7, true);
 
 
 --
@@ -1523,10 +1617,24 @@ ALTER TABLE ONLY public.users
 
 
 --
+-- Name: ads approve_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER approve_trigger AFTER UPDATE OF approver_mail ON public.ads FOR EACH ROW WHEN ((old.approver_mail IS NULL)) EXECUTE PROCEDURE public.approve_trigger();
+
+
+--
 -- Name: pay_history pay_trigger; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
 CREATE TRIGGER pay_trigger AFTER INSERT ON public.pay_history FOR EACH ROW EXECUTE PROCEDURE public.pay_trigger();
+
+
+--
+-- Name: ads post_trigger; Type: TRIGGER; Schema: public; Owner: postgres
+--
+
+CREATE TRIGGER post_trigger AFTER INSERT ON public.ads FOR EACH ROW WHEN ((NOT public.is_admin(new.poster_mail))) EXECUTE PROCEDURE public.post_trigger();
 
 
 --

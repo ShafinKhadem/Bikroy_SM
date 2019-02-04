@@ -158,9 +158,7 @@ try {
 
 <h1><center>Home page</center></h1>
 <br><br>
-<form method="post">
-    <input type="submit" class="btn btn-info" name="signup" value="Sign up">
-<?php
+<form method="post"><?php
 if (isset($_SESSION['email'])) {
     echo "Signed in with email: {$_SESSION['email']}";
 ?>
@@ -168,6 +166,7 @@ if (isset($_SESSION['email'])) {
 <?php
 } else {
 ?>
+    <input type="submit" class="btn btn-info" name="signup" value="Sign up">
     <input type="submit" class="btn btn-info" name="signin" value="Sign in">
 <?php } ?>
 
