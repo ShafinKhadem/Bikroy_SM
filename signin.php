@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Sign in Demo</title>
-    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="bootstrap-4.2.1-dist/css/bootstrap.css">
 </head>
 <body>
 
@@ -11,15 +11,11 @@
 require_once 'vendor/autoload.php';
 
 use BikroySM\Connection as Connection;
-use BikroySM\Epdo as Epdo;
 
 session_start();
 
 try {
-    // connect to the PostgreSQL database
-    $pdo = Connection::get()->connect();
-    // echo 'A connection to the PostgreSQL database server has been established successfully.';
-    $epdo = new Epdo($pdo);
+    $epdo = Connection::get()->connect();
 } catch (\PDOException $e) {
     echo $e->getMessage();
 }
@@ -38,10 +34,11 @@ try {
         <tr><td></td>
             <td><input type="submit" class="btn btn-info" name="signin" value="Sign in"></td></tr>
     </table>
+    <p style="background-color: grey; color: yellow">select * from users where users.email = '{$_POST['mail']}' and users."password"='{$_POST['pswrd']}';</p>
 <?php
 if (isset($_POST['signin'])) {
     // retrieves this user from the users table if exists
-    $users = $epdo->getFromWhere("signin('{$_POST['mail']}', '{$_POST['pswrd']}')");
+    $users = $epdo->getQueryResults("select * from users where users.email = '{$_POST['mail']}' and users.password='{$_POST['pswrd']}';");
         // print_r($users);
     if (count($users)!=1) {
 ?>

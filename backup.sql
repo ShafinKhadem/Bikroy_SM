@@ -46,24 +46,6 @@ CREATE TYPE public.report_type AS ENUM (
 ALTER TYPE public.report_type OWNER TO postgres;
 
 --
--- Name: approve_ad(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.approve_ad(_ad_id integer, usermail character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	cnt int;
-begin
-	update ads set approver_mail=usermail where ad_id=_ad_id and approver_mail is NULL;
-	GET DIAGNOSTICS cnt = ROW_COUNT;
-	return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.approve_ad(_ad_id integer, usermail character varying) OWNER TO postgres;
-
---
 -- Name: approve_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -75,7 +57,7 @@ DECLARE
 	price int;
 BEGIN
 	msg='ur ad with id '||new.ad_id||' has been approved by '||new.approver_mail;
-  perform send_message('bikroy.com', new.poster_mail, msg);
+	perform send_message('bikroy.com', new.poster_mail, msg);
 	return new;
 END
 $$;
@@ -93,7 +75,7 @@ CREATE FUNCTION public.check_ad_category(_ad_id integer, _category character var
 declare
 	cnt int;
 begin
-	select "count"(*) into cnt from ads where ad_id=_ad_id and category=_category;
+	select "count"(*) into cnt from "public".ads where ad_id=_ad_id and category=_category;
 	if cnt=0 then
 		return 'f';
 	else
@@ -114,7 +96,7 @@ CREATE FUNCTION public.check_ad_type(_ad_id integer, _category character varying
 declare
 	cnt int;
 begin
-	select "count"(*) into cnt from ads where ad_id=_ad_id and category=_category and subcategory=_subcategory;
+	select "count"(*) into cnt from "public".ads where ad_id=_ad_id and category=_category and subcategory=_subcategory;
 	if cnt=0 then
 		return 'f';
 	else
@@ -148,24 +130,6 @@ end; $$;
 
 
 ALTER FUNCTION public.check_edit_access(_ad_id integer, usermail character varying) OWNER TO postgres;
-
---
--- Name: delete_ad(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.delete_ad(_ad_id integer, usermail character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	cnt int;
-begin
-	delete from ads where ads.ad_id=_ad_id and (ads.poster_mail=usermail or exists(select * from users where users.email=usermail and is_admin='t'));
-	GET DIAGNOSTICS cnt = ROW_COUNT;
-	return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.delete_ad(_ad_id integer, usermail character varying) OWNER TO postgres;
 
 --
 -- Name: ad_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
@@ -576,55 +540,6 @@ end; $$;
 ALTER FUNCTION public.edit_motor_cycle_ad(_motor_cycle_ad public.motor_cycle_ads_view) OWNER TO postgres;
 
 --
--- Name: get_accounts(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_accounts() RETURNS TABLE(email character varying, name character varying)
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query 
- 
- select "users"."email", "users"."name" from "users"
- order by "users"."name", "users"."email";
-end; $$;
-
-
-ALTER FUNCTION public.get_accounts() OWNER TO postgres;
-
---
--- Name: get_approved_by(character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_approved_by(usermail character varying) RETURNS TABLE(ad_id integer, title character varying, poster_mail character varying)
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query 
- 
- select ads.ad_id, ads.title, ads.poster_mail from ads where coalesce(approver_mail,'null')=usermail order by date desc, time desc;
-end; $$;
-
-
-ALTER FUNCTION public.get_approved_by(usermail character varying) OWNER TO postgres;
-
---
--- Name: get_car_ad(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_car_ad(_ad_id integer) RETURNS SETOF public.car_ads_view
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select * from car_ads_view v where v.ad_id=_ad_id;
-end; $$;
-
-
-ALTER FUNCTION public.get_car_ad(_ad_id integer) OWNER TO postgres;
-
---
 -- Name: get_categories(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -639,24 +554,6 @@ end; $$;
 
 
 ALTER FUNCTION public.get_categories() OWNER TO postgres;
-
---
--- Name: get_chats(character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_chats(usermail1 character varying, usermail2 character varying) RETURNS TABLE(sender_mail character varying, receiver_mail character varying, message character varying, "time" time without time zone, date date)
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query 
- 
- select chats.sender_mail, chats.receiver_mail, chats.message, chats."time", chats."date" from chats where 
- (chats.sender_mail=usermail1 and chats.receiver_mail=usermail2) or (chats.sender_mail=usermail2 and chats.receiver_mail=usermail1)
- order by chats."date" desc, chats."time" desc;
-end; $$;
-
-
-ALTER FUNCTION public.get_chats(usermail1 character varying, usermail2 character varying) OWNER TO postgres;
 
 --
 -- Name: get_column_names(character varying); Type: FUNCTION; Schema: public; Owner: postgres
@@ -678,42 +575,6 @@ end; $$;
 ALTER FUNCTION public.get_column_names(table_or_view_name character varying) OWNER TO postgres;
 
 --
--- Name: get_electronics_ad(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_electronics_ad(_ad_id integer) RETURNS SETOF public.electronics_ads_view
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select * from electronics_ads_view v where v.ad_id=_ad_id;
-end; $$;
-
-
-ALTER FUNCTION public.get_electronics_ad(_ad_id integer) OWNER TO postgres;
-
---
--- Name: get_favorites(character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_favorites(usermail character varying) RETURNS TABLE(ad_id integer, title character varying, "time" time without time zone, date date)
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query 
- 
- select r.ad_id, r.title, l."time", l."date" from
- (select * from stars where
- stars.starrer_mail=usermail) l left join
- (select ads.ad_id, ads.title from ads) r on (l.starred_ad_id=r.ad_id)
- order by l.date desc, l.time desc;
-end; $$;
-
-
-ALTER FUNCTION public.get_favorites(usermail character varying) OWNER TO postgres;
-
---
 -- Name: get_locations(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -728,143 +589,6 @@ end; $$;
 
 
 ALTER FUNCTION public.get_locations() OWNER TO postgres;
-
---
--- Name: get_mobile_ad(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_mobile_ad(_ad_id integer) RETURNS SETOF public.mobile_ads_view
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select * from mobile_ads_view v where v.ad_id=_ad_id;
-end; $$;
-
-
-ALTER FUNCTION public.get_mobile_ad(_ad_id integer) OWNER TO postgres;
-
---
--- Name: get_motor_cycle_ad(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_motor_cycle_ad(_ad_id integer) RETURNS SETOF public.motor_cycle_ads_view
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select * from motor_cycle_ads_view v where v.ad_id=_ad_id;
-end; $$;
-
-
-ALTER FUNCTION public.get_motor_cycle_ad(_ad_id integer) OWNER TO postgres;
-
---
--- Name: get_others_ad(integer); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_others_ad(_ad_id integer) RETURNS SETOF public.ads
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select * from ads v where v.ad_id=_ad_id;
-end; $$;
-
-
-ALTER FUNCTION public.get_others_ad(_ad_id integer) OWNER TO postgres;
-
---
--- Name: get_posts(character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_posts(usermail character varying) RETURNS TABLE(ad_id integer, title character varying, "time" time without time zone, date date)
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select "ads"."ad_id", "ads"."title", ads."time", ads."date" from "ads"
- where poster_mail=usermail
- order by ads."date" desc, ads."time" desc;
-end; $$;
-
-
-ALTER FUNCTION public.get_posts(usermail character varying) OWNER TO postgres;
-
---
--- Name: get_price(character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_price(_category character varying, _subcategory character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	price int;
-begin
-	select ad_price into price from product_type where category=_category and subcategory=_subcategory;
-	return price;
-end; $$;
-
-
-ALTER FUNCTION public.get_price(_category character varying, _subcategory character varying) OWNER TO postgres;
-
---
--- Name: get_received_messages(character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_received_messages(usermail character varying) RETURNS TABLE(sender_mail character varying, message character varying, "time" time without time zone, date date)
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select chats.sender_mail, chats.message, chats."time", chats."date" from chats where 
- chats.receiver_mail=usermail
- order by chats."date" desc, chats."time" desc;
-end; $$;
-
-
-ALTER FUNCTION public.get_received_messages(usermail character varying) OWNER TO postgres;
-
---
--- Name: get_reporteds(); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_reporteds() RETURNS TABLE(ad_id integer, report_cnt bigint)
-    LANGUAGE plpgsql
-    AS $$
-begin
-	return query
-	
-	select reported_ad_id, "count"(*) report_cnt from reports group by reported_ad_id order by report_cnt desc;
-end; $$;
-
-
-ALTER FUNCTION public.get_reporteds() OWNER TO postgres;
-
---
--- Name: get_reports(character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.get_reports(usermail character varying) RETURNS TABLE(ad_id integer, title character varying, report_type public.report_type, message character varying, "time" time without time zone, date date)
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query
- 
- select r.ad_id, r.title, l.report_type, l.message, l."time", l."date" from
- (select * from reports where
- reports.reporter_mail=usermail) l left join
- (select ads.ad_id, ads.title from ads) r on (l.reported_ad_id=r.ad_id)
- order by l.date desc, l.time desc;
-end; $$;
-
-
-ALTER FUNCTION public.get_reports(usermail character varying) OWNER TO postgres;
 
 --
 -- Name: get_subcategories(character varying); Type: FUNCTION; Schema: public; Owner: postgres
@@ -920,24 +644,6 @@ end; $$;
 ALTER FUNCTION public.is_admin(usermail character varying) OWNER TO postgres;
 
 --
--- Name: pay(integer, integer, integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.pay(_ad_id integer, days integer, _amount integer, _transactionid character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	cnt int;
-begin
- insert into pay_history(ad_id, promoted_days, amount, transaction_id) values(_ad_id, days, _amount, _transactionid);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.pay(_ad_id integer, days integer, _amount integer, _transactionid character varying) OWNER TO postgres;
-
---
 -- Name: pay_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -968,94 +674,22 @@ CREATE FUNCTION public.post_ad(_buy_or_sell boolean, _poster_phone character var
     LANGUAGE plpgsql
     AS $$
 declare
-    adid int;
-		cnt int;
-		_approver_mail varchar;
+	adid int;
+	cnt int;
+	_approver_mail varchar;
 begin
 	if is_admin(_poster_mail) then
 		_approver_mail:=_poster_mail;
 	else
 		_approver_mail:=NULL;
 	end if;
- insert into ads(buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail) values(_buy_or_sell, _poster_phone, _price, _is_negotiable, _title, _details, _category, _subcategory, _location, _sublocation, _poster_mail, _approver_mail) returning ad_id into adid;
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return adid;
+	insert into ads(buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail) values(_buy_or_sell, _poster_phone, _price, _is_negotiable, _title, _details, _category, _subcategory, _location, _sublocation, _poster_mail, _approver_mail) returning ad_id into adid;
+	GET DIAGNOSTICS cnt = ROW_COUNT;
+	return adid;
 end; $$;
 
 
 ALTER FUNCTION public.post_ad(_buy_or_sell boolean, _poster_phone character varying, _price integer, _is_negotiable boolean, _title character varying, _details character varying, _category character varying, _subcategory character varying, _location character varying, _sublocation character varying, _poster_mail character varying) OWNER TO postgres;
-
---
--- Name: post_car_ad(integer, character varying, character varying, character varying, character varying, character varying, character varying, character varying, character varying, integer, real); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.post_car_ad(_ad_id integer, _brand character varying, _model character varying, _edition character varying, _model_year character varying, _condition character varying, _transmission character varying, _body_type character varying, _fuel_type character varying, _engine_capacity integer, _kilometers_run real) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	cnt int;
-begin
- insert into car_ads(brand, model, edition, model_year, "condition", transmission, body_type, fuel_type, engine_capacity, kilometers_run, ad_id) values(_brand, _model, _edition, _model_year, _condition, _transmission, _body_type, _fuel_type, _engine_capacity, _kilometers_run, _ad_id);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.post_car_ad(_ad_id integer, _brand character varying, _model character varying, _edition character varying, _model_year character varying, _condition character varying, _transmission character varying, _body_type character varying, _fuel_type character varying, _engine_capacity integer, _kilometers_run real) OWNER TO postgres;
-
---
--- Name: post_electronics_ad(integer, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.post_electronics_ad(_ad_id integer, _brand character varying, _model character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-    cnt int;
-begin
- insert into electronics_ads(brand, model, ad_id) values(_brand, _model, _ad_id);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.post_electronics_ad(_ad_id integer, _brand character varying, _model character varying) OWNER TO postgres;
-
---
--- Name: post_mobile_ad(integer, character varying, character varying, character varying, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.post_mobile_ad(_ad_id integer, _brand character varying, _model character varying, _edition character varying, _features character varying, _authenticity character varying, _condition character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-    cnt int;
-begin
- insert into mobile_ads(brand, model, edition, features, authenticity, "condition", ad_id) values(_brand, _model, _edition, _features, _authenticity, _condition, _ad_id);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.post_mobile_ad(_ad_id integer, _brand character varying, _model character varying, _edition character varying, _features character varying, _authenticity character varying, _condition character varying) OWNER TO postgres;
-
---
--- Name: post_motor_cycle_ad(integer, character varying, character varying, character varying, integer, character varying, integer, real); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.post_motor_cycle_ad(_ad_id integer, _bike_type character varying, _brand character varying, _model character varying, _model_year integer, _condition character varying, _engine_capacity integer, _kilometers_run real) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-    cnt int;
-begin
- insert into motor_cycle_ads(bike_type, brand, model, model_year, "condition", engine_capacity, kilometers_run, ad_id) values(_bike_type, _brand, _model, _model_year, _condition, _engine_capacity, _kilometers_run, _ad_id);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.post_motor_cycle_ad(_ad_id integer, _bike_type character varying, _brand character varying, _model character varying, _model_year integer, _condition character varying, _engine_capacity integer, _kilometers_run real) OWNER TO postgres;
 
 --
 -- Name: post_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1070,31 +704,13 @@ DECLARE
 BEGIN
 	select ad_price into price from product_type where category=new.category and subcategory=new.subcategory;
 	msg='ur ad is pending for admin approval, u need to first pay '||price||'. ur ad id is '||new.ad_id;
-  perform send_message('bikroy.com', new.poster_mail, msg);
+	perform send_message('bikroy.com', new.poster_mail, msg);
 	return new;
 END
 $$;
 
 
 ALTER FUNCTION public.post_trigger() OWNER TO postgres;
-
---
--- Name: report_ad(integer, character varying, public.report_type, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.report_ad(_ad_id integer, _email character varying, _report_type public.report_type, _message character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	cnt int;
-begin
- insert into reports(reported_ad_id, reporter_mail, report_type, message) values(_ad_id, _email, _report_type, _message);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.report_ad(_ad_id integer, _email character varying, _report_type public.report_type, _message character varying) OWNER TO postgres;
 
 --
 -- Name: report_trigger(); Type: FUNCTION; Schema: public; Owner: postgres
@@ -1108,7 +724,7 @@ DECLARE
 	msg varchar;
 BEGIN
 	msg='report from '||new.reporter_mail||' on ad '||new.reported_ad_id||' as '||new.report_type||' with message: '||new.message;
-  for var in (select email from users where is_admin='t')
+	for var in (select email from users where is_admin='t')
 	loop
 		perform send_message('bikroy.com', var.email, msg);
 	end loop;
@@ -1123,117 +739,17 @@ ALTER FUNCTION public.report_trigger() OWNER TO postgres;
 -- Name: send_message(character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.send_message(_sender_mail character varying, _receiver_mail character varying, _message character varying) RETURNS integer
+CREATE FUNCTION public.send_message(_sender_mail character varying, _receiver_mail character varying, _message character varying) RETURNS void
     LANGUAGE plpgsql
     AS $$
 declare
 	cnt int;
 begin
- insert into chats(sender_mail, receiver_mail, message) values(_sender_mail, _receiver_mail, _message);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
+	insert into chats(sender_mail, receiver_mail, message) values(_sender_mail, _receiver_mail, _message);
 end; $$;
 
 
 ALTER FUNCTION public.send_message(_sender_mail character varying, _receiver_mail character varying, _message character varying) OWNER TO postgres;
-
---
--- Name: users; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE public.users (
-    email character varying(255) NOT NULL,
-    password character varying(255) NOT NULL,
-    name character varying(255) NOT NULL,
-    is_admin boolean DEFAULT false,
-    location character varying(255),
-    sublocation character varying(255)
-);
-
-
-ALTER TABLE public.users OWNER TO postgres;
-
---
--- Name: signin(character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.signin(_email character varying, _password character varying) RETURNS SETOF public.users
-    LANGUAGE plpgsql
-    AS $$
-begin
- return query 
- 
- select * from users where users.email = _email and users."password"=_password;
-end; $$;
-
-
-ALTER FUNCTION public.signin(_email character varying, _password character varying) OWNER TO postgres;
-
---
--- Name: signup(character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.signup(_email character varying, _name character varying, _password character varying) RETURNS void
-    LANGUAGE plpgsql
-    AS $$BEGIN
-  INSERT INTO users(email, name, password) VALUES(_email, _name, _password);
-
-END
-$$;
-
-
-ALTER FUNCTION public.signup(_email character varying, _name character varying, _password character varying) OWNER TO postgres;
-
---
--- Name: star_ad(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.star_ad(_ad_id integer, _email character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	cnt int;
-begin
- insert into stars(starred_ad_id, starrer_mail) values(_ad_id, _email);
- GET DIAGNOSTICS cnt = ROW_COUNT;
- return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.star_ad(_ad_id integer, _email character varying) OWNER TO postgres;
-
---
--- Name: star_remove_ad(integer, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.star_remove_ad(_ad_id integer, _email character varying) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-declare
-	cnt int;
-begin
-	delete from stars where stars.starred_ad_id=_ad_id and stars.starrer_mail=_email;
-	GET DIAGNOSTICS cnt = ROW_COUNT;
-	return cnt;
-end; $$;
-
-
-ALTER FUNCTION public.star_remove_ad(_ad_id integer, _email character varying) OWNER TO postgres;
-
---
--- Name: update_user(character varying, character varying, character varying, character varying, character varying); Type: FUNCTION; Schema: public; Owner: postgres
---
-
-CREATE FUNCTION public.update_user(_email character varying, _name character varying, _password character varying, _location character varying, _sublocation character varying) RETURNS void
-    LANGUAGE plpgsql
-    AS $$BEGIN
-  -- Routine body goes here...
-	UPDATE users SET name = _name, password = _password, location = _location, sublocation = _sublocation WHERE email = _email;
-END
-$$;
-
-
-ALTER FUNCTION public.update_user(_email character varying, _name character varying, _password character varying, _location character varying, _sublocation character varying) OWNER TO postgres;
 
 --
 -- Name: chats; Type: TABLE; Schema: public; Owner: postgres
@@ -1336,6 +852,22 @@ CREATE TABLE public.stars (
 ALTER TABLE public.stars OWNER TO postgres;
 
 --
+-- Name: users; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.users (
+    email character varying(255) NOT NULL,
+    password character varying(255) NOT NULL,
+    name character varying(255) NOT NULL,
+    is_admin boolean DEFAULT false,
+    location character varying(255),
+    sublocation character varying(255)
+);
+
+
+ALTER TABLE public.users OWNER TO postgres;
+
+--
 -- Data for Name: ads; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1349,6 +881,8 @@ COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, 
 3	f	0	1	t	demo	demo	mobile	mobile_phone	BUET	CSE	admin	admin	10:09:15.500106	2019-01-24
 5	f	420	1	f	I don't have money.	Apni ki apnar gariti harate chan? na chaile aji amake diye din. I don't have money, but I have guns.	vehicle	car	Dhaka	Malibagh	admin	admin	02:30:07.811652	2019-01-26
 9	t	01777777777	777777777	t	amar bugatti veyron bechte chai, prapto taka dan kore dewa hobe.	becha hobe kind of bidding er madhyome, bidding onushthito hobe juventus stadium e.	vehicle	car	Dhaka	Jatrabari	cr7@gmail.com	admin	18:45:43.864541	2019-02-05
+10	t	1223	123	t	dfasdffdsafas	dfasdfas	electronics	computer accessories	Dhaka	Mirpur	cr7@gmail.com	\N	10:50:20.246426	2019-02-11
+11	f	12345	10000000	t	khulnay bari kinte chai	budget kintu beshi na, matro 1 koti taka :'(. duplex bari hoite hobe.	others	others	Khulna	KUET	nazrinshukti	admin	09:30:42.333559	2019-02-13
 \.
 
 
@@ -1368,37 +902,8 @@ Bugatti	Veyron	Deluxe	2015	brand new	automatic	stainless steel	octen	3500	1000	9
 --
 
 COPY public.chats (sender_mail, receiver_mail, message, "time", date) FROM stdin;
-admin	admin2	'hello mugdho'	10:11:58.241146	2019-01-24
-admin2	admin	'hello shafin'	10:11:58.241146	2019-01-24
-admin	admin2	testingFunction	10:11:58.241146	2019-01-24
-admin2	admin	testing2	10:11:58.241146	2019-01-24
-admin	admin2	hello from php	11:14:03.481175	2019-01-25
-admin	admin2	doesnot work if use some punctuations	11:20:07.664005	2019-01-25
-admin	admin2	let's check apostrophe	13:28:05.727881	2019-01-25
-admin	admin2	let's check other genjaimma punctuations: !@#$%^&*()_-+={[]};:'",<.>/?`~...	13:30:31.039192	2019-01-25
-admin	admin2	hello tasin	05:07:05.533315	2019-01-26
-bikroy.com	admin	report from lm10@gmail.com on ad 3	19:32:14.188622	2019-02-03
-bikroy.com	admin	report from lm10@gmail.com on ad 7	11:26:11.989576	2019-02-03
-bikroy.com	admin	payment for ad 6 with promotion days: 15	19:36:40.279841	2019-02-03
-bikroy.com	admin	payment for ad 7 with promotion days: 7	22:26:06.095645	2019-02-03
-bikroy.com	lm10@gmail.com	ur ad is pending for admin approval, u need to first pay 25. ur ad id is 8	19:36:12.101678	2019-02-04
-bikroy.com	admin	payment for ad 8 with promotion days: 0	19:38:26.337356	2019-02-04
-bikroy.com	lm10@gmail.com	ur ad with id 8 has been approved by admin	19:39:30.280013	2019-02-04
-bikroy.com	admin2	report from cr7@gmail.com on ad 8	20:12:05.118047	2019-02-04
-bikroy.com	admin	report from cr7@gmail.com on ad 8	20:12:05.118047	2019-02-04
-bikroy.com	bikroy.com	report from cr7@gmail.com on ad 8	20:12:05.118047	2019-02-04
-cr7@gmail.com	lm10@gmail.com	How dare u report me? I have taken revenge by report u XD.	20:12:40.341061	2019-02-04
-bikroy.com	admin2	report from cr7@gmail.com on ad 4 as other with message ballon d or painai dekhe mood kharap.	20:21:41.596019	2019-02-04
-bikroy.com	admin	report from cr7@gmail.com on ad 4 as other with message ballon d or painai dekhe mood kharap.	20:21:41.596019	2019-02-04
-bikroy.com	bikroy.com	report from cr7@gmail.com on ad 4 as other with message ballon d or painai dekhe mood kharap.	20:21:41.596019	2019-02-04
-bikroy.com	cr7@gmail.com	ur ad is pending for admin approval, u need to first pay 1000. ur ad id is 9	18:45:43.864541	2019-02-05
-bikroy.com	admin2	payment for ad 9 with promotion days: 0	18:46:50.20875	2019-02-05
-bikroy.com	admin	payment for ad 9 with promotion days: 0	18:46:50.20875	2019-02-05
-bikroy.com	bikroy.com	payment for ad 9 with promotion days: 0	18:46:50.20875	2019-02-05
-bikroy.com	cr7@gmail.com	ur ad with id 9 has been approved by admin	18:47:19.867476	2019-02-05
-bikroy.com	admin2	payment for ad 9 with promotion days: 15	18:50:19.297111	2019-02-05
-bikroy.com	admin	payment for ad 9 with promotion days: 15	18:50:19.297111	2019-02-05
-bikroy.com	bikroy.com	payment for ad 9 with promotion days: 15	18:50:19.297111	2019-02-05
+nazrinshukti	admin	lab quiz er jonyo ki theory pora lagbe?	16:48:56.749051	2019-02-13
+admin	nazrinshukti	ha tui por :) :'(	16:50:01.136734	2019-02-13
 \.
 
 
@@ -1408,6 +913,7 @@ bikroy.com	bikroy.com	payment for ad 9 with promotion days: 15	18:50:19.297111	2
 
 COPY public.electronics_ads (brand, model, ad_id) FROM stdin;
 dell	inspiron n405	7
+dfas	dfasdfas	10
 \.
 
 
@@ -1454,6 +960,7 @@ COPY public.pay_history (ad_id, promoted_days, amount, transaction_id, "time") F
 8	0	25	again vejal	2019-02-04 19:38:26.337356
 9	0	1000	ami i shera	2019-02-05 18:46:50.20875
 9	15	1500	I am the best	2019-02-05 18:50:19.297111
+11	0	25	23452	2019-02-13 09:33:11.541093
 \.
 
 
@@ -1485,6 +992,7 @@ COPY public.reports (report_id, report_type, message, reporter_mail, reported_ad
 5	wrong category	sorry, just testing	lm10@gmail.com	3	19:32:14.188622	2019-02-03
 6	fraud	as messi has reported me, I must also report him.	cr7@gmail.com	8	20:12:05.118047	2019-02-04
 7	other	ballon d or painai dekhe mood kharap.	cr7@gmail.com	4	20:21:41.596019	2019-02-04
+8	other	how dare u threaten others?	nazrinshukti	5	09:03:07.00588	2019-02-13
 \.
 
 
@@ -1497,6 +1005,7 @@ COPY public.stars (starred_ad_id, starrer_mail, "time", date) FROM stdin;
 2	admin2	20:56:41.668591	2019-01-24
 3	admin	07:51:13.063194	2019-01-24
 9	cr7@gmail.com	18:48:02.190838	2019-02-05
+9	nazrinshukti	09:00:19.532301	2019-02-13
 \.
 
 
@@ -1505,12 +1014,12 @@ COPY public.stars (starred_ad_id, starrer_mail, "time", date) FROM stdin;
 --
 
 COPY public.users (email, password, name, is_admin, location, sublocation) FROM stdin;
-nazrinshukti	lifeispink	nazrin shukti	f	\N	\N
 cr7@gmail.com	cr7	cristiano ronaldo	f	Dhaka	Jatrabari
 admin2	adminMugdho	admin	t	Dhaka	Jatrabari
-admin	ami i admin	admin	t	BUET	CSE
 bikroy.com	ami i database	database itself	t	BUET	CSE
 lm10@gmail.com	I am the GOAT	lionel messi	f	Dhaka	Mirpur
+admin	ami i admin	admin	t	BUET	CSE
+nazrinshukti	lifeispink	nazrin shukti	f	BUET	CSE
 \.
 
 
@@ -1518,14 +1027,14 @@ lm10@gmail.com	I am the GOAT	lionel messi	f	Dhaka	Mirpur
 -- Name: ad_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ad_id_seq', 9, true);
+SELECT pg_catalog.setval('public.ad_id_seq', 11, true);
 
 
 --
 -- Name: report_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.report_id_seq', 7, true);
+SELECT pg_catalog.setval('public.report_id_seq', 8, true);
 
 
 --
@@ -1620,7 +1129,7 @@ ALTER TABLE ONLY public.users
 -- Name: ads approve_trigger; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
-CREATE TRIGGER approve_trigger AFTER UPDATE OF approver_mail ON public.ads FOR EACH ROW WHEN ((old.approver_mail IS NULL)) EXECUTE PROCEDURE public.approve_trigger();
+CREATE TRIGGER approve_trigger AFTER UPDATE OF approver_mail ON public.ads FOR EACH ROW WHEN (((old.approver_mail IS NULL) AND (new.approver_mail IS NOT NULL))) EXECUTE PROCEDURE public.approve_trigger();
 
 
 --

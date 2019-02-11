@@ -2,6 +2,8 @@
 
 namespace BikroySM;
 
+require_once 'Epdo.php';
+
 /**
  * Represent the Connection
  */
@@ -12,14 +14,17 @@ class Connection {
      * @var type
      */
     private static $conn;
+    private static $epdo;
 
     /**
-     * Connect to the database and return an instance of \PDO object
-     * @return \PDO
+     * Connect to the database and return an instance of Epdo object
+     * @return Epdo
      * @throws \Exception
      */
     public function connect() {
-
+        if (isset(static::$epdo)) {
+            return static::$epdo;
+        }
         // read parameters in the ini configuration file
         $params = parse_ini_file('database.ini');
         if ($params === false) {
@@ -35,8 +40,8 @@ class Connection {
 
         $pdo = new \PDO($conStr);
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-
-        return $pdo;
+        static::$epdo = new Epdo($pdo);
+        return static::$epdo;
     }
 
     /**

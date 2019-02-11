@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Show ad Demo</title>
-    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="bootstrap-4.2.1-dist/css/bootstrap.css">
 </head>
 <body>
 
@@ -11,11 +11,44 @@
 require 'vendor/autoload.php';
 
 use BikroySM\Connection as Connection;
-use BikroySM\Epdo as Epdo;
+
+function showAds($ads) {
+?>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>ad_id</th>
+                <th>title</th>
+                <th>price</th>
+                <th>posting date</th>
+                <th>posting time</th>
+                <th>category</th>
+                <th>subcategory</th>
+                <th>location</th>
+                <th>sublocation</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($ads as $ad) : ?>
+                <tr>
+                    <td><a href="showAd.php?adid=<?php echo($ad['ad_id']); ?>"><?php echo "{$ad['ad_id']}"; ?></a></td>
+                    <td><?php echo $ad['title']; ?></td>
+                    <td><?php echo $ad['price']; ?></td>
+                    <td><?php echo $ad['date']; ?></td>
+                    <td><?php echo $ad['time']; ?></td>
+                    <td><?php echo $ad['category']; ?></td>
+                    <td><?php echo $ad['subcategory']; ?></td>
+                    <td><?php echo $ad['location']; ?></td>
+                    <td><?php echo $ad['sublocation']; ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+<?php
+}
 
 try {
-    $pdo = Connection::get()->connect();
-    $epdo = new Epdo($pdo);
+    $epdo = Connection::get()->connect();
     $str = "ads where approver_mail is not null";
     if ((isset($_POST['location']) and $_POST['location']!='any') or (isset($_POST['category']) and $_POST['category']!='any')) {
         if (isset($_POST['location']) and $_POST['location']!='any') {
@@ -40,8 +73,6 @@ try {
         $str = $str." order by {$_POST['sort']}";
     }
 
-    // echo $str;
-    // echo htmlspecialchars($str2);
     $ads = $epdo->getFromWhere($str);
     $topads = $epdo->getFromWhere($str2);
     // var_dump($ads);
@@ -126,25 +157,21 @@ if (isset($_POST['category'])) {
     <input type="submit" class="btn btn-info" name="showAds" value="show ads">
 </form>
 
-<br><br>
+<br>
 
-top ads:<br>
-<?php
-foreach ($topads as $ad) {
-?>
-    <a href="showAd.php?adid=<?php echo($ad['ad_id']); ?>">id: <?php echo "{$ad['ad_id']}"; ?>, title: <?php echo "{$ad['title']}"; ?></a>
-    <br>
-<?php
-}
-?>
-<br><br>ads:<br>
-<?php
-foreach ($ads as $ad) {
-?>
-    <a href="showAd.php?adid=<?php echo($ad['ad_id']); ?>">id: <?php echo "{$ad['ad_id']}"; ?>, title: <?php echo "{$ad['title']}"; ?></a>
-    <br>
-<?php
-}
-?>
+<div class="container">
+    <p style="background-color: grey; color: yellow"><?php echo "select * from ".$str2; ?></p><br>
+    <center><h1><font color="blue">2 random top ads with given filters: 🙂</font></h1></center>
+    <br><br>
+    <?php showAds($topads); ?>
+
+    <br><br><br>
+    <p style="background-color: grey; color: yellow"><?php echo "select * from ".$str; ?></p>
+
+    <center><h1><font color="blue">all ads with given filter & ordering: 🙂</font></h1></center>
+    <br><br>
+    <?php showAds($ads); ?>
+
+</div>
 </body>
 </html>

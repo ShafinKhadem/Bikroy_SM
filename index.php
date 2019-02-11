@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Home page</title>
-    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="bootstrap-4.2.1-dist/css/bootstrap.css">
 </head>
 <body>
 
@@ -11,15 +11,13 @@
 require 'vendor/autoload.php';
 
 use BikroySM\Connection as Connection;
-use BikroySM\Epdo as Epdo;
 
 session_start();
 
 try {
     // connect to the PostgreSQL database
-    $pdo = Connection::get()->connect();
+    $epdo = Connection::get()->connect();
     // echo 'A connection to the PostgreSQL database server has been established successfully.';
-    $epdo = new Epdo($pdo);
 
     if (isset($_POST['signup'])) {
         header("location: signup.php");
@@ -46,7 +44,7 @@ try {
         exit();
         // delete_everything();
     } elseif (isset($_POST['promoteAd'])) {
-        $epdo->getFromWhere("pay({$_POST['adid']}, {$_POST['promoteDays']}, {$_POST['amount']}, '{$_POST['transactionid']}')");
+        $epdo->getQueryResults("insert into pay_history(ad_id, promoted_days, amount, transaction_id) values({$_POST['adid']}, {$_POST['promoteDays']}, {$_POST['amount']}, '{$_POST['transactionid']}');");
         // delete_everything();
     }
     if (isset($_POST['showAds'])) {
@@ -57,63 +55,6 @@ try {
     if (isset($_POST['runTransactionDemo'])) {
         // run transactionDemo() function written in Epdo.php
         $epdo->transactionDemo();
-    }
-    if (isset($_POST['runFunctionDemo'])) {
-        $accounts = $epdo->getFromWhere('get_accounts()');
-?>
-
-        <div class="container">
-            <center><h1>Account List</h1></center>
-            <br><br>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>email</th>
-                        <th>Name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($accounts as $account) : ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($account['email']) ?></td>
-                            <td><?php echo htmlspecialchars($account['name']); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-<?php
-        exit();
-        // delete_everything();
-    }
-    if (isset($_POST['show'])) {
-        $users = $epdo->findByPK($_POST['mail3']);
-?>
-
-        <div class="container">
-            <center><h1>Users List</h1></center>
-            <br><br>
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>email</th>
-                        <th>name</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($users as $user) : ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($user['email']) ?></td>
-                            <td><?php echo htmlspecialchars($user['name']); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-
-<?php
-        exit();
     }
     if (isset($_POST['runQuery'])) {
         $rows = $epdo->getQueryResults($_POST['query']);
@@ -171,23 +112,9 @@ if (isset($_SESSION['email'])) {
 <?php } ?>
 
     <input type="submit" class="btn btn-info" name="showUser" value="show ur page">
-    <br><br>
-    <br><br>
 
     <br><br>
     <!-- <input type="submit" class="btn btn-info" name="runTransactionDemo" value="Run transaction demo"> -->
-
-    <br><br>
-    <input type="submit" class="btn btn-info" name="runFunctionDemo" value="show all accounts">
-
-    <br><br>
-    <div class="input-group">
-        <div class="input-group-prepend">
-            <span class="input-group-text">@</span>
-        </div>
-        <input type="text" name="mail3" placeholder="email" size="30">
-        <input type="submit" class="btn btn-info" name="show" value="Show user with this email">
-    </div>
 
     <br><br>
     <input type="submit" class="btn btn-info" name="showAds" value="show all ads">
@@ -198,7 +125,25 @@ if (isset($_SESSION['email'])) {
     <br>promoteDays: <input type="text" name="promoteDays">
     <br>amount: <input type="text" name="amount">
     <br>transactionid: <input type="text" name="transactionid">
-    <input type="submit" class="btn btn-info" name="promoteAd" value="Promote ad with this id">
+    <br><br><p style="background-color: grey; color: yellow">insert into pay_history(ad_id, promoted_days, amount, transaction_id) values({$_POST['adid']}, {$_POST['promoteDays']}, {$_POST['amount']}, '{$_POST['transactionid']}');</p>
+    <h3>Pay trigger:</h3><p><pre style="background-color: grey; color: yellow">
+    CREATE OR REPLACE FUNCTION "public"."pay_trigger"()
+    RETURNS "pg_catalog"."trigger" AS $BODY$
+    DECLARE
+        var record;
+        msg varchar;
+    BEGIN
+        msg='payment for ad '||new.ad_id||' with promotion days: '||new.promoted_days;
+        for var in (select email from users where is_admin='t')
+        loop
+            perform send_message('bikroy.com', var.email, msg);
+        end loop;
+        return new;
+    END
+    $BODY$
+      LANGUAGE plpgsql VOLATILE
+      COST 100</pre></p>
+    <input type="submit" class="btn btn-info" name="promoteAd" value="Pay for ad with this id">
 
     <br><br>
     Select query: <br><textarea name="query" rows="10" cols="100"></textarea><br>

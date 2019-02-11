@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Show ad Demo</title>
-    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="bootstrap-4.2.1-dist/css/bootstrap.css">
 </head>
 <body>
 
@@ -11,30 +11,28 @@
 require 'vendor/autoload.php';
 
 use BikroySM\Connection as Connection;
-use BikroySM\Epdo as Epdo;
 
 try {
-    $pdo = Connection::get()->connect();
-    $epdo = new Epdo($pdo);
-    $str = "get_others_ad({$_GET['adid']})";
-    $ad = $epdo->getFromWhere($str)[0];
+    $epdo = Connection::get()->connect();
+    $str = "select * from ads v where v.ad_id={$_GET['adid']};";
+    $ad = $epdo->getQueryResults($str)[0];
     if ($ad['category']=='electronics') {
-        $str = "get_electronics_ad({$_GET['adid']})";
+        $str = "select * from electronics_ads_view v where v.ad_id={$_GET['adid']};";
     } elseif ($ad['subcategory']=='car') {
-        $str = "get_car_ad({$_GET['adid']})";
+        $str = "select * from car_ads_view v where v.ad_id={$_GET['adid']};";
     } elseif ($ad['subcategory']=='motor_cycle') {
-        $str = "get_motor_cycle_ad({$_GET['adid']})";
+        $str = "select * from motor_cycle_ads_view v where v.ad_id={$_GET['adid']};";
     } elseif ($ad['subcategory']=='mobile_phone') {
-        $str = "get_mobile_ad({$_GET['adid']})";
+        $str = "select * from mobile_ads_view v where v.ad_id={$_GET['adid']};";
     }
-    $ad = $epdo->getFromWhere($str)[0];
+    $ad = $epdo->getQueryResults($str)[0];
     // var_dump($ad);
 } catch (\PDOException $e) {
     echo $e->getMessage();
 }
 
 ?>
-
+    <br><br><p style="background-color: grey; color: yellow"><?php echo $str; ?></p>
     <center><h1><font color="blue">Your queried ad 🙂</font></h1></center>
     <br><br>
 <?php

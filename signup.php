@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Sign up Demo</title>
-    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="bootstrap-4.2.1-dist/css/bootstrap.css">
 </head>
 <body>
 
@@ -11,16 +11,12 @@
 require_once 'vendor/autoload.php';
 
 use BikroySM\Connection as Connection;
-use BikroySM\Epdo as Epdo;
 
 try {
-    // connect to the PostgreSQL database
-    $pdo = Connection::get()->connect();
-    // echo 'A connection to the PostgreSQL database server has been established successfully.';
-    $epdo = new Epdo($pdo);
+    $epdo = Connection::get()->connect();
 
     if (isset($_POST['signup']) and isset($_POST['agree']) and !empty($_POST['mail']) and filter_var($_POST['mail'], FILTER_VALIDATE_EMAIL) and isset($_POST['name']) and strlen($_POST['pswrd'])>=8) {
-        $epdo->getFromWhere("signup('{$_POST['mail']}', '{$_POST['name']}', '{$_POST['pswrd']}')");
+        $epdo->getQueryResults("INSERT INTO users(email, name, password) VALUES('{$_POST['mail']}', '{$_POST['name']}', '{$_POST['pswrd']}');");
         header('location: signin.php');
         exit();
     }
@@ -73,6 +69,7 @@ try {
         <tr><td></td>
             <td><input type="submit" class="btn btn-info" name="signup" value="Sign up"></td></tr>
     </table>
+    <p style="background-color: grey; color: yellow">INSERT INTO users(email, name, password) VALUES('{$_POST['mail']}', '{$_POST['name']}', '{$_POST['pswrd']}');</p>
 </form>
 </body>
 </html>

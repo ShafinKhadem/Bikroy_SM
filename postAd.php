@@ -1,17 +1,100 @@
+<?php
+require 'vendor/autoload.php';
+
+use BikroySM\Connection as Connection;
+
+try {
+    $epdo = Connection::get()->connect();
+    if (isset($_POST['postAd'])) {  // eita na dile tui form submit korte parbi na.
+        goto skipTry;
+    }
+    if (isset($_REQUEST['loc'])) {  // loc er jaygay location use korle always dhora khabe
+            $sublocations = $epdo->getFromWhereCol("get_sublocations('{$_POST['loc']}')");
+            foreach ($sublocations as $sublocation) {
+        ?>
+                <input type="radio" name="sublocation" value="<?php echo($sublocation); ?>" <?php if(isset($_POST['sublocation']) and $_POST['sublocation']==$sublocation)  echo 'checked="checked"';?> ><?php echo $sublocation; ?>
+        <?php
+            }
+        exit();
+    }
+    if (isset($_POST['subcategory'])) { // eitake oboshyoi porertar upore dite hobe, cause eitate category o thakbe.
+        if ($_POST['category']=='others') {
+            exit();
+        }
+        $str = $_POST['subcategory'].'_ads';
+        if ($_POST['subcategory']=='mobile_phone') {
+            $str = 'mobile_ads';
+        }
+        if ($_POST['category']=='electronics') {
+            $str = 'electronics_ads';
+        }
+        $attrs = $epdo->getFromWhereCol("get_column_names('{$str}')");
+        foreach ($attrs as $attr) {
+            if ($attr=='ad_id') continue;
+    ?>
+            <br><?php echo "{$attr}"; ?>: <input type="text" name="<?php echo($attr); ?>">
+    <?php
+        }
+        exit();
+    }
+    if (isset($_POST['category'])) {
+        $subcategories = $epdo->getFromWhereCol("get_subcategories('{$_POST['category']}')");
+        foreach ($subcategories as $subcategory) {
+    ?>
+            <input type="radio" name="subcategory" onclick="getAttrs(this)" value="<?php echo($subcategory); ?>" <?php if(isset($_POST['subcategory']) and $_POST['subcategory']==$subcategory)  echo 'checked="checked"';?> ><?php echo $subcategory; ?>
+    <?php
+        }
+        exit();
+    }
+    skipTry: ;
+} catch (\PDOException $e) {
+    echo $e->getMessage();
+}
+?>
 <!DOCTYPE html>
 <html>
 <head>
     <title>Post ad Demo</title>
-    <link rel="stylesheet" href="bootstrap.css">
+    <link rel="stylesheet" href="bootstrap-4.2.1-dist/css/bootstrap.css">
 </head>
 <body>
+    <h3>Post ad function:</h3><p><pre style="background-color: grey; color: yellow">
+    CREATE OR REPLACE FUNCTION "public"."post_ad"("_buy_or_sell" bool, "_poster_phone" varchar, "_price" int4, "_is_negotiable" bool, "_title" varchar, "_details" varchar, "_category" varchar, "_subcategory" varchar, "_location" varchar, "_sublocation" varchar, "_poster_mail" varchar)
+      RETURNS "pg_catalog"."int4" AS $BODY$
+    declare
+        adid int;
+        cnt int;
+        _approver_mail varchar;
+    begin
+        if is_admin(_poster_mail) then
+            _approver_mail:=_poster_mail;
+        else
+            _approver_mail:=NULL;
+        end if;
+        insert into ads(buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail) values(_buy_or_sell, _poster_phone, _price, _is_negotiable, _title, _details, _category, _subcategory, _location, _sublocation, _poster_mail, _approver_mail) returning ad_id into adid;
+        GET DIAGNOSTICS cnt = ROW_COUNT;
+        return adid;
+    end; $BODY$
+      LANGUAGE plpgsql VOLATILE
+      COST 100</pre></p>
+
+    <h3>Post ad trigger:</h3><p><pre style="background-color: grey; color: yellow">
+    CREATE OR REPLACE FUNCTION "public"."post_trigger"()
+      RETURNS "pg_catalog"."trigger" AS $BODY$
+    DECLARE
+        msg varchar;
+        price int;
+    BEGIN
+        select ad_price into price from product_type where category=new.category and subcategory=new.subcategory;
+        msg='ur ad is pending for admin approval, u need to first pay '||price||'. ur ad id is '||new.ad_id;
+        perform send_message('bikroy.com', new.poster_mail, msg);
+        return new;
+    END
+    $BODY$
+      LANGUAGE plpgsql VOLATILE
+      COST 100</pre></p>
 
 <?php
-
-require 'vendor/autoload.php';
-
-use BikroySM\Connection as Connection;
-use BikroySM\Epdo as Epdo;
 
 session_start();
 
@@ -21,10 +104,7 @@ if (empty($_SESSION['email'])) {
     echo nl2br("Email: ".$_SESSION['email']."\n"."Name: ".$_SESSION['name']."\n");
 }
 try {
-    $pdo = Connection::get()->connect();
-    $epdo = new Epdo($pdo);
 
-    // $adatrspost = array('0' => 'buy_or_sell', '1' => 'poster_phone', '2' => 'price', '3' => 'is_negotiable', '4' => 'title', '5' => 'details', '6' => 'category', '7' => 'subcategory', '8' => 'location', '9' => 'sublocation');
     if (isset($_POST['postAd'])) {
         $tit = str_replace("'", "'__'", $_POST['title']);
         $det = str_replace("'", "'__'", $_POST['details']);
@@ -32,24 +112,26 @@ try {
         , '{$det}', '{$_POST['category']}', '{$_POST['subcategory']}', '{$_POST['location']}', '{$_POST['sublocation']}', '{$_SESSION['email']}')";
         $str = str_replace("''", "null", $str);
         $str = str_replace("'__'", "''", $str);
-        // echo $str;
+        echo $str;
         $adid = $epdo->getFromWhereVal($str);
         if ($_POST['category']=='electronics') {
-            $str = "post_electronics_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}')";
+            $str = "insert into electronics_ads(ad_id, brand, model) values({$adid}, '{$_POST['brand']}', '{$_POST['model']}')";
         } elseif ($_POST['subcategory']=='car') {
-            $str = "post_car_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['model_year']}', '{$_POST['condition']}'
+            $str = "insert into car_ads(ad_id, brand, model, edition, model_year, \"condition\", transmission, body_type, fuel_type, engine_capacity, kilometers_run) values
+            ({$adid}, '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['model_year']}', '{$_POST['condition']}'
             , '{$_POST['transmission']}', '{$_POST['body_type']}', '{$_POST['fuel_type']}', '{$_POST['engine_capacity']}', '{$_POST['kilometers_run']}')";
         } elseif ($_POST['subcategory']=='motor_cycle') {
-            $str = "post_motor_cycle_ad('{$adid}', '{$_POST['bike_type']}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['model_year']}', '{$_POST['condition']}'
+            $str = "insert into motor_cycle_ads(ad_id, bike_type, brand, model, model_year, \"condition\", engine_capacity, kilometers_run) values
+            ({$adid}, '{$_POST['bike_type']}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['model_year']}', '{$_POST['condition']}'
             , '{$_POST['engine_capacity']}', '{$_POST['kilometers_run']}')";
         } elseif ($_POST['subcategory']=='mobile_phone') {
-            $str = "post_mobile_ad('{$adid}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['features']}', '{$_POST['authenticity']}'
-            , '{$_POST['condition']}')";
+            $str = "insert into mobile_ads(ad_id, brand, model, edition, features, authenticity, \"condition\") values
+            ({$adid}, '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['features']}', '{$_POST['authenticity']}', '{$_POST['condition']}')";
         }
         if ($_POST['category']!='others') {
             $str = str_replace("''", "null", $str);
-            // echo $str;
-            $epdo->getFromWhere($str);
+            echo $str;
+            $epdo->getQueryResults($str);
         }
         header('location: user.php');
     }
@@ -85,13 +167,53 @@ try {
         <br>
 
         <br><br>
+<script>
+    function ajax(caller, attr, trgt) {
+        // alert(attr+'='+caller.value);
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                document.getElementById(trgt).innerHTML = this.responseText;
+            }
+        };
 
+        xhttp.open('POST', 'postAd.php', true);
+        xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xhttp.send(attr+'='+caller.value);
+
+
+
+        // just for personal use
+        if (attr=='category') {document.getElementById('attrs').innerHTML='';}
+    }
+
+    function getAttrs(caller) {
+        var radios = document.getElementsByName('category');
+        for (var i = 0, length = radios.length; i < length; i++) {
+            if (radios[i].checked) {
+                var str = 'subcategory='+caller.value+'&category='+radios[i].value;
+                break;
+            }
+        }
+        // alert(str);
+        var xhttp = new XMLHttpRequest();
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                document.getElementById('attrs').innerHTML = this.responseText;
+            }
+        };
+
+        xhttp.open('POST', 'postAd.php', true);
+        xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xhttp.send(str);
+    }
+</script>
         location:
 <?php
 $locations = $epdo->getFromWhereCol('get_locations()');
 foreach ($locations as $location) {
 ?>
-    <input type="radio" name="location" value="<?php echo($location); ?>" <?php if(isset($_POST['location']) and $_POST['location']==$location)  echo 'checked="checked"';?> ><?php echo $location; ?>
+    <input type="radio" name="location" onclick="ajax(this, 'loc', 'sublocs')" value="<?php echo($location); ?>" <?php if(isset($_POST['location']) and $_POST['location']==$location)  echo 'checked="checked"';?> ><?php echo $location; ?>
 <?php
 }
 ?>
@@ -99,16 +221,7 @@ foreach ($locations as $location) {
         <br>
 
         sublocation:
-<?php
-if (isset($_POST['location'])) {
-    $sublocations = $epdo->getFromWhereCol("get_sublocations('{$_POST['location']}')");
-    foreach ($sublocations as $sublocation) {
-?>
-        <input type="radio" name="sublocation" value="<?php echo($sublocation); ?>" <?php if(isset($_POST['sublocation']) and $_POST['sublocation']==$sublocation)  echo 'checked="checked"';?> ><?php echo $sublocation; ?>
-<?php
-    }
-}
-?>
+        <span id="sublocs"></span>
 
         <br><br>
 
@@ -117,7 +230,7 @@ if (isset($_POST['location'])) {
 $categories = $epdo->getFromWhereCol('get_categories()');
 foreach ($categories as $category) {
 ?>
-    <input type="radio" name="category" value="<?php echo($category); ?>" <?php if(isset($_POST['category']) and $_POST['category']==$category)  echo 'checked="checked"';?> ><?php echo $category; ?>
+    <input type="radio" name="category" onclick="ajax(this, 'category', 'subcats')" value="<?php echo($category); ?>" <?php if(isset($_POST['category']) and $_POST['category']==$category)  echo 'checked="checked"';?> ><?php echo $category; ?>
 <?php
 }
 ?>
@@ -125,32 +238,8 @@ foreach ($categories as $category) {
         <br>
 
         subcategory:
-<?php
-if (isset($_POST['category'])) {
-    $subcategories = $epdo->getFromWhereCol("get_subcategories('{$_POST['category']}')");
-    foreach ($subcategories as $subcategory) {
-?>
-        <input type="radio" name="subcategory" value="<?php echo($subcategory); ?>" <?php if(isset($_POST['subcategory']) and $_POST['subcategory']==$subcategory)  echo 'checked="checked"';?> ><?php echo $subcategory; ?>
-<?php
-    }
-    if (isset($_POST['subcategory']) and $_POST['category']!='others') {
-        $str = $_POST['subcategory'].'_ads';
-        if ($_POST['category']=='electronics') {
-            $str = 'electronics_ads';
-        }
-        $attrs = $epdo->getFromWhereCol("get_column_names('{$str}')");
-        foreach ($attrs as $attr) {
-            if ($attr=='ad_id') continue;
-?>
-            <br><?php echo "{$attr}"; ?>: <input type="text" name="<?php echo($attr); ?>">
-<?php
-        }
-    }
-}
-?>
-        <br><br>
-
-        <input type="submit" class="btn btn-info" name="next" value="next">
+        <span id="subcats"></span>
+        <div id="attrs"></div>
 
         <br><br>
         <input type="submit" class="btn btn-info" name="postAd" value="postAd">
