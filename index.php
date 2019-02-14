@@ -58,37 +58,7 @@ try {
     }
     if (isset($_POST['runQuery'])) {
         $rows = $epdo->getQueryResults($_POST['query']);
-        if (!isset($rows[0])) {
-            echo "empty table";
-        } else {
-?>
-
-            <div class="container">
-                <center><h1>result</h1></center>
-                <br><br>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <?php foreach ($rows[0] as $key => $value) : ?>
-                                <th><?php echo "{$key}"; ?></th>
-                            <?php endforeach; ?>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($rows as $row) : ?>
-                            <tr>
-                                <?php foreach ($row as $col) : ?>
-                                    <td><?php if (is_bool($col)) var_export($col);    // otherwise boolean false is shown as empty string.
-                                                else echo "{$col}"; ?></td>
-                                <?php endforeach; ?>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-
-<?php
-        }
+        $epdo->showAll($rows);
         exit();
         // delete_everything();
     }

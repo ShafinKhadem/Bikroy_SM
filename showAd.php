@@ -18,12 +18,8 @@ try {
     $ad = $epdo->getQueryResults($str)[0];
     if ($ad['category']=='electronics') {
         $str = "select * from electronics_ads_view v where v.ad_id={$_GET['adid']};";
-    } elseif ($ad['subcategory']=='car') {
-        $str = "select * from car_ads_view v where v.ad_id={$_GET['adid']};";
-    } elseif ($ad['subcategory']=='motor_cycle') {
-        $str = "select * from motor_cycle_ads_view v where v.ad_id={$_GET['adid']};";
-    } elseif ($ad['subcategory']=='mobile_phone') {
-        $str = "select * from mobile_ads_view v where v.ad_id={$_GET['adid']};";
+    } else if ($ad['subcategory']!='others') {
+        $str = "select * from {$ad['subcategory']}_ads_view v where v.ad_id={$_GET['adid']};";
     }
     $ad = $epdo->getQueryResults($str)[0];
     // var_dump($ad);
@@ -32,8 +28,10 @@ try {
 }
 
 ?>
-    <br><br><p style="background-color: grey; color: yellow"><?php echo $str; ?></p>
+    <br><p style="background-color: grey; color: yellow"><?php echo $str; ?></p>
     <center><h1><font color="blue">Your queried ad 🙂</font></h1></center>
+    <br><br>
+    <img src="<?php echo("uploads/{$ad['ad_id']}.png"); ?>" alt="no image available">
     <br><br>
 <?php
 foreach ($ad as $key => $value) {

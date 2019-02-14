@@ -167,8 +167,7 @@ CREATE TABLE public.ads (
     sublocation character varying(255) NOT NULL,
     poster_mail character varying(255) NOT NULL,
     approver_mail character varying(255),
-    "time" time without time zone DEFAULT CURRENT_TIME NOT NULL,
-    date date DEFAULT CURRENT_DATE NOT NULL
+    "time" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -184,8 +183,8 @@ CREATE FUNCTION public.edit_ad(_ad public.ads) RETURNS integer
 declare
     cnt int;
 begin
-    update ads set(ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail, "time", "date") =
-    (_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price, _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad."time", _ad."date") where ad_id=_ad.ad_id;
+    update ads set(ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail, "time") =
+    (_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price, _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad."time") where ad_id=_ad.ad_id;
     GET DIAGNOSTICS cnt = ROW_COUNT;
     return cnt;
 end; $$;
@@ -234,7 +233,6 @@ CREATE VIEW public.car_ads_view AS
     l.poster_mail,
     l.approver_mail,
     l."time",
-    l.date,
     r.brand,
     r.model,
     r.edition,
@@ -258,8 +256,7 @@ CREATE VIEW public.car_ads_view AS
             ads.sublocation,
             ads.poster_mail,
             ads.approver_mail,
-            ads."time",
-            ads.date
+            ads."time"
            FROM public.ads
           WHERE (((ads.category)::text = 'vehicle'::text) AND ((ads.subcategory)::text = 'car'::text))) l
      LEFT JOIN public.car_ads r ON ((l.ad_id = r.ad_id)));
@@ -271,21 +268,21 @@ ALTER TABLE public.car_ads_view OWNER TO postgres;
 -- Name: edit_car_ad(public.car_ads_view); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.edit_car_ad(_car_ad public.car_ads_view) RETURNS integer
+CREATE FUNCTION public.edit_car_ad(_ad public.car_ads_view) RETURNS integer
     LANGUAGE plpgsql
     AS $$
 declare
     cnt int;
 begin
-    perform edit_ad(row(_car_ad.ad_id, _car_ad.buy_or_sell, _car_ad.poster_phone, _car_ad.price, _car_ad.is_negotiable, _car_ad.title, _car_ad.details, _car_ad.category, _car_ad.subcategory, _car_ad."location", _car_ad.sublocation, _car_ad.poster_mail, _car_ad.approver_mail, _car_ad."time", _car_ad."date"));
+    perform edit_ad(row(_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price, _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad."time"));
     update car_ads set(brand, model, edition, model_year, "condition", transmission, body_type, fuel_type, engine_capacity, kilometers_run) =
-    (_car_ad.brand, _car_ad.model, _car_ad.edition, _car_ad.model_year, _car_ad."condition", _car_ad.transmission, _car_ad.body_type, _car_ad.fuel_type, _car_ad.engine_capacity, _car_ad.kilometers_run) where ad_id=_car_ad.ad_id;
+    (_ad.brand, _ad.model, _ad.edition, _ad.model_year, _ad."condition", _ad.transmission, _ad.body_type, _ad.fuel_type, _ad.engine_capacity, _ad.kilometers_run) where ad_id=_ad.ad_id;
     GET DIAGNOSTICS cnt = ROW_COUNT;
     return cnt;
 end; $$;
 
 
-ALTER FUNCTION public.edit_car_ad(_car_ad public.car_ads_view) OWNER TO postgres;
+ALTER FUNCTION public.edit_car_ad(_ad public.car_ads_view) OWNER TO postgres;
 
 --
 -- Name: electronics_ads; Type: TABLE; Schema: public; Owner: postgres
@@ -320,7 +317,6 @@ CREATE VIEW public.electronics_ads_view AS
     l.poster_mail,
     l.approver_mail,
     l."time",
-    l.date,
     r.brand,
     r.model
    FROM (( SELECT ads.ad_id,
@@ -336,8 +332,7 @@ CREATE VIEW public.electronics_ads_view AS
             ads.sublocation,
             ads.poster_mail,
             ads.approver_mail,
-            ads."time",
-            ads.date
+            ads."time"
            FROM public.ads
           WHERE ((ads.category)::text = 'electronics'::text)) l
      LEFT JOIN public.electronics_ads r ON ((l.ad_id = r.ad_id)));
@@ -349,27 +344,27 @@ ALTER TABLE public.electronics_ads_view OWNER TO postgres;
 -- Name: edit_electronics_ad(public.electronics_ads_view); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.edit_electronics_ad(_electronics_ad public.electronics_ads_view) RETURNS integer
+CREATE FUNCTION public.edit_electronics_ad(_ad public.electronics_ads_view) RETURNS integer
     LANGUAGE plpgsql
     AS $$
 declare
     cnt int;
 begin
-    perform edit_ad(row(_electronics_ad.ad_id, _electronics_ad.buy_or_sell, _electronics_ad.poster_phone, _electronics_ad.price, _electronics_ad.is_negotiable, _electronics_ad.title, _electronics_ad.details, _electronics_ad.category, _electronics_ad.subcategory, _electronics_ad."location", _electronics_ad.sublocation, _electronics_ad.poster_mail, _electronics_ad.approver_mail, _electronics_ad."time", _electronics_ad."date"));
+    perform edit_ad(row(_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price, _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad."time"));
     update electronics_ads set(brand, model) =
-    (_electronics_ad.brand, _electronics_ad.model) where ad_id=_electronics_ad.ad_id;
+    (_ad.brand, _ad.model) where ad_id=_ad.ad_id;
     GET DIAGNOSTICS cnt = ROW_COUNT;
     return cnt;
 end; $$;
 
 
-ALTER FUNCTION public.edit_electronics_ad(_electronics_ad public.electronics_ads_view) OWNER TO postgres;
+ALTER FUNCTION public.edit_electronics_ad(_ad public.electronics_ads_view) OWNER TO postgres;
 
 --
--- Name: mobile_ads; Type: TABLE; Schema: public; Owner: postgres
+-- Name: mobile_phone_ads; Type: TABLE; Schema: public; Owner: postgres
 --
 
-CREATE TABLE public.mobile_ads (
+CREATE TABLE public.mobile_phone_ads (
     brand character varying(255),
     model character varying(255),
     edition character varying(255),
@@ -381,13 +376,13 @@ CREATE TABLE public.mobile_ads (
 );
 
 
-ALTER TABLE public.mobile_ads OWNER TO postgres;
+ALTER TABLE public.mobile_phone_ads OWNER TO postgres;
 
 --
--- Name: mobile_ads_view; Type: VIEW; Schema: public; Owner: postgres
+-- Name: mobile_phone_ads_view; Type: VIEW; Schema: public; Owner: postgres
 --
 
-CREATE VIEW public.mobile_ads_view AS
+CREATE VIEW public.mobile_phone_ads_view AS
  SELECT l.ad_id,
     l.buy_or_sell,
     l.poster_phone,
@@ -402,7 +397,6 @@ CREATE VIEW public.mobile_ads_view AS
     l.poster_mail,
     l.approver_mail,
     l."time",
-    l.date,
     r.brand,
     r.model,
     r.edition,
@@ -422,34 +416,34 @@ CREATE VIEW public.mobile_ads_view AS
             ads.sublocation,
             ads.poster_mail,
             ads.approver_mail,
-            ads."time",
-            ads.date
+            ads."time"
            FROM public.ads
           WHERE (((ads.category)::text = 'mobile'::text) AND ((ads.subcategory)::text = 'mobile_phone'::text))) l
-     LEFT JOIN public.mobile_ads r ON ((l.ad_id = r.ad_id)));
+     LEFT JOIN public.mobile_phone_ads r ON ((l.ad_id = r.ad_id)));
 
 
-ALTER TABLE public.mobile_ads_view OWNER TO postgres;
+ALTER TABLE public.mobile_phone_ads_view OWNER TO postgres;
 
 --
--- Name: edit_mobile_ad(public.mobile_ads_view); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: edit_mobile_phone_ad(public.mobile_phone_ads_view); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
-CREATE FUNCTION public.edit_mobile_ad(_mobile_ad public.mobile_ads_view) RETURNS integer
+CREATE FUNCTION public.edit_mobile_phone_ad(_ad public.mobile_phone_ads_view) RETURNS integer
     LANGUAGE plpgsql
     AS $$
 declare
     cnt int;
 begin
-    perform edit_ad(row(_mobile_ad.ad_id, _mobile_ad.buy_or_sell, _mobile_ad.poster_phone, _mobile_ad.price, _mobile_ad.is_negotiable, _mobile_ad.title, _mobile_ad.details, _mobile_ad.category, _mobile_ad.subcategory, _mobile_ad."location", _mobile_ad.sublocation, _mobile_ad.poster_mail, _mobile_ad.approver_mail, _mobile_ad."time", _mobile_ad."date"));
-    update mobile_ads set(brand, model, edition, features, authenticity, "condition") =
-    (_mobile_ad.brand, _mobile_ad.model, _mobile_ad.edition, _mobile_ad.features, _mobile_ad.authenticity, _mobile_ad.condition) where ad_id=_mobile_ad.ad_id;
+    perform edit_ad(row(_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price,
+       _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad."time"));
+    update mobile_phone_ads set(brand, model, edition, features, authenticity, "condition") =
+    (_ad.brand, _ad.model, _ad.edition, _ad.features, _ad.authenticity, _ad.condition) where ad_id=_ad.ad_id;
     GET DIAGNOSTICS cnt = ROW_COUNT;
     return cnt;
 end; $$;
 
 
-ALTER FUNCTION public.edit_mobile_ad(_mobile_ad public.mobile_ads_view) OWNER TO postgres;
+ALTER FUNCTION public.edit_mobile_phone_ad(_ad public.mobile_phone_ads_view) OWNER TO postgres;
 
 --
 -- Name: motor_cycle_ads; Type: TABLE; Schema: public; Owner: postgres
@@ -489,7 +483,6 @@ CREATE VIEW public.motor_cycle_ads_view AS
     l.poster_mail,
     l.approver_mail,
     l."time",
-    l.date,
     r.bike_type,
     r.brand,
     r.model,
@@ -510,8 +503,7 @@ CREATE VIEW public.motor_cycle_ads_view AS
             ads.sublocation,
             ads.poster_mail,
             ads.approver_mail,
-            ads."time",
-            ads.date
+            ads."time"
            FROM public.ads
           WHERE (((ads.category)::text = 'vehicle'::text) AND ((ads.subcategory)::text = 'motor_cycle'::text))) l
      LEFT JOIN public.motor_cycle_ads r ON ((l.ad_id = r.ad_id)));
@@ -529,7 +521,7 @@ CREATE FUNCTION public.edit_motor_cycle_ad(_motor_cycle_ad public.motor_cycle_ad
 declare
     cnt int;
 begin
-    perform edit_ad(row(_motor_cycle_ad.ad_id, _motor_cycle_ad.buy_or_sell, _motor_cycle_ad.poster_phone, _motor_cycle_ad.price, _motor_cycle_ad.is_negotiable, _motor_cycle_ad.title, _motor_cycle_ad.details, _motor_cycle_ad.category, _motor_cycle_ad.subcategory, _motor_cycle_ad."location", _motor_cycle_ad.sublocation, _motor_cycle_ad.poster_mail, _motor_cycle_ad.approver_mail, _motor_cycle_ad."time", _motor_cycle_ad."date"));
+    perform edit_ad(row(_motor_cycle_ad.ad_id, _motor_cycle_ad.buy_or_sell, _motor_cycle_ad.poster_phone, _motor_cycle_ad.price, _motor_cycle_ad.is_negotiable, _motor_cycle_ad.title, _motor_cycle_ad.details, _motor_cycle_ad.category, _motor_cycle_ad.subcategory, _motor_cycle_ad."location", _motor_cycle_ad.sublocation, _motor_cycle_ad.poster_mail, _motor_cycle_ad.approver_mail, _motor_cycle_ad."time"));
     update motor_cycle_ads set(bike_type, brand, model, model_year, "condition", engine_capacity, kilometers_run) =
     (_motor_cycle_ad.bike_type, _motor_cycle_ad.brand, _motor_cycle_ad.model, _motor_cycle_ad.model_year, _motor_cycle_ad.condition, _motor_cycle_ad.engine_capacity, _motor_cycle_ad.kilometers_run) where ad_id=_motor_cycle_ad.ad_id;
     GET DIAGNOSTICS cnt = ROW_COUNT;
@@ -759,8 +751,7 @@ CREATE TABLE public.chats (
     sender_mail character varying(255) NOT NULL,
     receiver_mail character varying(255) NOT NULL,
     message character varying(255) NOT NULL,
-    "time" time(6) without time zone DEFAULT CURRENT_TIME NOT NULL,
-    date date DEFAULT CURRENT_DATE NOT NULL
+    "time" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -830,8 +821,7 @@ CREATE TABLE public.reports (
     message character varying(255),
     reporter_mail character varying(255) NOT NULL,
     reported_ad_id integer NOT NULL,
-    "time" time(6) without time zone DEFAULT CURRENT_TIME NOT NULL,
-    date date DEFAULT CURRENT_DATE NOT NULL
+    "time" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -844,8 +834,7 @@ ALTER TABLE public.reports OWNER TO postgres;
 CREATE TABLE public.stars (
     starred_ad_id integer NOT NULL,
     starrer_mail character varying(255) NOT NULL,
-    "time" time(6) without time zone DEFAULT CURRENT_TIME NOT NULL,
-    date date DEFAULT CURRENT_DATE NOT NULL
+    "time" timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -871,18 +860,8 @@ ALTER TABLE public.users OWNER TO postgres;
 -- Data for Name: ads; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, location, sublocation, poster_mail, approver_mail, "time", date) FROM stdin;
-6	t	77777777	77777777	f	amar madrider bariti bechte chai	\N	others	others	Dhaka	Jatrabari	cr7@gmail.com	admin2	12:40:30.38054	2019-01-31
-7	t	5214	121	t	I can't bear with this laptop nemore	\N	electronics	computer	Dhaka	Mirpur	admin	admin	08:59:14.367318	2019-02-02
-8	f	101010	101010	t	world cup kinte chai	I am the GOAT but some don't admit as I  haven't got a world cup.	others	others	Dhaka	Mirpur	lm10@gmail.com	admin	19:36:12.101678	2019-02-04
-1	t	0	10000	f	honda	\N	vehicle	motor_cycle	BUET	CSE	admin2	admin2	09:32:48.96786	2019-01-24
-4	t	1	1	t	testing edit_mobile_ad from php	1	mobile	mobile_phone	BUET	CSE	admin2	admin2	11:44:10.383567	2019-01-24
-2	t	0	1	t	untitled	testing edit	vehicle	car	BUET	CSE	admin	admin	10:09:15.500105	2019-01-24
-3	f	0	1	t	demo	demo	mobile	mobile_phone	BUET	CSE	admin	admin	10:09:15.500106	2019-01-24
-5	f	420	1	f	I don't have money.	Apni ki apnar gariti harate chan? na chaile aji amake diye din. I don't have money, but I have guns.	vehicle	car	Dhaka	Malibagh	admin	admin	02:30:07.811652	2019-01-26
-9	t	01777777777	777777777	t	amar bugatti veyron bechte chai, prapto taka dan kore dewa hobe.	becha hobe kind of bidding er madhyome, bidding onushthito hobe juventus stadium e.	vehicle	car	Dhaka	Jatrabari	cr7@gmail.com	admin	18:45:43.864541	2019-02-05
-10	t	1223	123	t	dfasdffdsafas	dfasdfas	electronics	computer accessories	Dhaka	Mirpur	cr7@gmail.com	\N	10:50:20.246426	2019-02-11
-11	f	12345	10000000	t	khulnay bari kinte chai	budget kintu beshi na, matro 1 koti taka :'(. duplex bari hoite hobe.	others	others	Khulna	KUET	nazrinshukti	admin	09:30:42.333559	2019-02-13
+COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, location, sublocation, poster_mail, approver_mail, "time") FROM stdin;
+2	t	12345	1000	t	ljlkjlkjl	dfasdfasf	electronics	computer	Dhaka	Malibagh	admin	admin	2019-02-15 05:22:16.842652
 \.
 
 
@@ -891,9 +870,6 @@ COPY public.ads (ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, 
 --
 
 COPY public.car_ads (brand, model, edition, model_year, condition, transmission, body_type, fuel_type, engine_capacity, kilometers_run, ad_id) FROM stdin;
-toyota	corolla	2011	2010	vanga	manual	plastic	kerosine	0	100000	2
-Allah Hafej	2	3	4	5	6	7	8	9	10	5
-Bugatti	Veyron	Deluxe	2015	brand new	automatic	stainless steel	octen	3500	1000	9
 \.
 
 
@@ -901,9 +877,7 @@ Bugatti	Veyron	Deluxe	2015	brand new	automatic	stainless steel	octen	3500	1000	9
 -- Data for Name: chats; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.chats (sender_mail, receiver_mail, message, "time", date) FROM stdin;
-nazrinshukti	admin	lab quiz er jonyo ki theory pora lagbe?	16:48:56.749051	2019-02-13
-admin	nazrinshukti	ha tui por :) :'(	16:50:01.136734	2019-02-13
+COPY public.chats (sender_mail, receiver_mail, message, "time") FROM stdin;
 \.
 
 
@@ -912,8 +886,7 @@ admin	nazrinshukti	ha tui por :) :'(	16:50:01.136734	2019-02-13
 --
 
 COPY public.electronics_ads (brand, model, ad_id) FROM stdin;
-dell	inspiron n405	7
-dfas	dfasdfas	10
+dell	n4050	2
 \.
 
 
@@ -928,16 +901,15 @@ Dhaka	Malibagh
 Dhaka	Mirpur
 Dhaka	Jatrabari
 Khulna	KUET
+Khulna	KU
 \.
 
 
 --
--- Data for Name: mobile_ads; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: mobile_phone_ads; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.mobile_ads (brand, model, edition, features, authenticity, condition, ad_id) FROM stdin;
-nokia	1100	express	charge, no vanga	orginal	abar jigay	3
-nokia	1200	express	memory card	nai	vanga	4
+COPY public.mobile_phone_ads (brand, model, edition, features, authenticity, condition, ad_id) FROM stdin;
 \.
 
 
@@ -946,7 +918,6 @@ nokia	1200	express	memory card	nai	vanga	4
 --
 
 COPY public.motor_cycle_ads (bike_type, brand, model, model_year, condition, engine_capacity, kilometers_run, ad_id) FROM stdin;
-honda	honda	honda	1500	vanga	0	1000000	1
 \.
 
 
@@ -955,12 +926,6 @@ honda	honda	honda	1500	vanga	0	1000000	1
 --
 
 COPY public.pay_history (ad_id, promoted_days, amount, transaction_id, "time") FROM stdin;
-6	15	1500	hudai	2019-02-03 21:15:14.085957
-7	7	700	shudhu shudhu pechal	2019-02-03 22:26:06.095645
-8	0	25	again vejal	2019-02-04 19:38:26.337356
-9	0	1000	ami i shera	2019-02-05 18:46:50.20875
-9	15	1500	I am the best	2019-02-05 18:50:19.297111
-11	0	25	23452	2019-02-13 09:33:11.541093
 \.
 
 
@@ -984,15 +949,7 @@ others	others	25
 -- Data for Name: reports; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.reports (report_id, report_type, message, reporter_mail, reported_ad_id, "time", date) FROM stdin;
-1	spam	faltu ad	admin	4	08:21:02.658913	2019-01-25
-3	wrong category	sorry, just testing wrong category type.	admin	1	15:04:58.014406	2019-01-25
-2	fraud	report my own ad XD to test punctuations: !@#$%^&*()_-+={[]};:'",<.>/?`~....	admin	3	13:32:32.438136	2019-01-25
-4	fraud	I don't care	lm10@gmail.com	7	11:26:11.989576	2019-02-03
-5	wrong category	sorry, just testing	lm10@gmail.com	3	19:32:14.188622	2019-02-03
-6	fraud	as messi has reported me, I must also report him.	cr7@gmail.com	8	20:12:05.118047	2019-02-04
-7	other	ballon d or painai dekhe mood kharap.	cr7@gmail.com	4	20:21:41.596019	2019-02-04
-8	other	how dare u threaten others?	nazrinshukti	5	09:03:07.00588	2019-02-13
+COPY public.reports (report_id, report_type, message, reporter_mail, reported_ad_id, "time") FROM stdin;
 \.
 
 
@@ -1000,12 +957,7 @@ COPY public.reports (report_id, report_type, message, reporter_mail, reported_ad
 -- Data for Name: stars; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.stars (starred_ad_id, starrer_mail, "time", date) FROM stdin;
-4	admin	10:14:31.596875	2019-01-25
-2	admin2	20:56:41.668591	2019-01-24
-3	admin	07:51:13.063194	2019-01-24
-9	cr7@gmail.com	18:48:02.190838	2019-02-05
-9	nazrinshukti	09:00:19.532301	2019-02-13
+COPY public.stars (starred_ad_id, starrer_mail, "time") FROM stdin;
 \.
 
 
@@ -1027,14 +979,14 @@ nazrinshukti	lifeispink	nazrin shukti	f	BUET	CSE
 -- Name: ad_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.ad_id_seq', 11, true);
+SELECT pg_catalog.setval('public.ad_id_seq', 2, true);
 
 
 --
 -- Name: report_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.report_id_seq', 8, true);
+SELECT pg_catalog.setval('public.report_id_seq', 1, true);
 
 
 --
@@ -1070,10 +1022,10 @@ ALTER TABLE ONLY public.locations
 
 
 --
--- Name: mobile_ads mobile_ads_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: mobile_phone_ads mobile_ads_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.mobile_ads
+ALTER TABLE ONLY public.mobile_phone_ads
     ADD CONSTRAINT mobile_ads_pkey PRIMARY KEY (ad_id);
 
 
@@ -1218,10 +1170,10 @@ ALTER TABLE ONLY public.electronics_ads
 
 
 --
--- Name: mobile_ads mobile_ads_ad_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: mobile_phone_ads mobile_ads_ad_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
-ALTER TABLE ONLY public.mobile_ads
+ALTER TABLE ONLY public.mobile_phone_ads
     ADD CONSTRAINT mobile_ads_ad_id_fkey FOREIGN KEY (ad_id) REFERENCES public.ads(ad_id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 

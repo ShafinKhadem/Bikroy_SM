@@ -21,13 +21,13 @@ if (empty($_SESSION['email'])) {
 try {
     $epdo = Connection::get()->connect();
     $isAdmin = $epdo->getFromWhereVal("is_admin('{$_SESSION['email']}')");
-    $str = "select chats.sender_mail, chats.message, chats.\"time\", chats.\"date\" from chats where chats.receiver_mail='{$_SESSION['email']}' order by chats.\"date\" desc, chats.\"time\" desc;";
+    $str = "select chats.sender_mail, chats.message, chats.\"time\" from chats where chats.receiver_mail='{$_SESSION['email']}' order by chats.\"time\" desc;";
     $notifications = $epdo->getQueryResults($str);
-    $str = "select r.ad_id, r.title, l.\"time\", l.\"date\" from (select * from stars where stars.starrer_mail='{$_SESSION['email']}') l left join (select ads.ad_id, ads.title from ads) r on (l.starred_ad_id=r.ad_id) order by l.date desc, l.time desc;";
+    $str = "select r.ad_id, r.title, l.\"time\" from (select * from stars where stars.starrer_mail='{$_SESSION['email']}') l left join (select ads.ad_id, ads.title from ads) r on (l.starred_ad_id=r.ad_id) order by l.time desc;";
     $favorites = $epdo->getQueryResults($str);
-    $str = "select ads.ad_id, ads.title, ads.\"time\", ads.\"date\" from ads where poster_mail='{$_SESSION['email']}' order by ads.\"date\" desc, ads.\"time\" desc;";
+    $str = "select ads.ad_id, ads.title, ads.\"time\" from ads where poster_mail='{$_SESSION['email']}' order by ads.\"time\" desc;";
     $posteds = $epdo->getQueryResults($str);
-    $str = "select r.ad_id, r.title, l.report_type, l.message, l.\"time\", l.\"date\" from (select * from reports where reports.reporter_mail='{$_SESSION['email']}') l left join (select ads.ad_id, ads.title from ads) r on (l.reported_ad_id=r.ad_id) order by l.date desc, l.time desc;";
+    $str = "select r.ad_id, r.title, l.report_type, l.message, l.\"time\" from (select * from reports where reports.reporter_mail='{$_SESSION['email']}') l left join (select ads.ad_id, ads.title from ads) r on (l.reported_ad_id=r.ad_id) order by l.time desc;";
     $reporteds = $epdo->getQueryResults($str);
     $cur = $epdo->getFromWhere("users where email = '{$_SESSION['email']}'")[0];
     //var_dump($cur);
@@ -69,34 +69,13 @@ try {
 if (isset($_POST['sendMessage'])) {
     $epdo->getFromWhere("send_message('{$_SESSION['email']}', '{$_POST['mail']}', '".str_replace("'", "''", $_POST['messageUser']).'\')');
 } elseif (isset($_POST['showChats'])) {
-    $str = "select chats.sender_mail, chats.receiver_mail, chats.message, chats.\"time\", chats.\"date\" from chats where (chats.sender_mail='{$_SESSION['email']}' and chats.receiver_mail='{$_POST['mail']}') or (chats.sender_mail='{$_POST['mail']}' and chats.receiver_mail='{$_SESSION['email']}') order by chats.\"date\" desc, chats.\"time\" desc;";
+    $str = "select chats.sender_mail, chats.receiver_mail, chats.message, chats.\"time\" from chats where (chats.sender_mail='{$_SESSION['email']}' and chats.receiver_mail='{$_POST['mail']}') or (chats.sender_mail='{$_POST['mail']}' and chats.receiver_mail='{$_SESSION['email']}') order by chats.\"time\" desc;";
     $chats = $epdo->getQueryResults($str);
 ?>
     <div class="container">
         <center><h1><font color="blue">Your queried chats 🙂</font></h1></center>
         <br><br>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>sender_mail</th>
-                    <th>receiver_mail</th>
-                    <th>message</th>
-                    <th>time</th>
-                    <th>date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($chats as $chat) : ?>
-                    <tr>
-                        <td><?php echo $chat['sender_mail']; ?></td>
-                        <td><?php echo $chat['receiver_mail']; ?></td>
-                        <td><?php echo $chat['message']; ?></td>
-                        <td><?php echo $chat['time']; ?></td>
-                        <td><?php echo $chat['date']; ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <?php $epdo->showAll($chats) ?>
     </div>
 
 <?php
@@ -107,7 +86,7 @@ if (isset($_POST['sendMessage'])) {
     <br><br>
 
     <div class="container">
-        <p style="background-color: grey; color: yellow">select chats.sender_mail, chats.message, chats."time", chats."date" from chats where chats.receiver_mail='{$_SESSION['email']}' order by chats."date" desc, chats."time" desc;</p>
+        <p style="background-color: grey; color: yellow">select chats.sender_mail, chats.message, chats."time" from chats where chats.receiver_mail='{$_SESSION['email']}' order by chats."time" desc;</p>
         <center><h1><font color="blue">Your notifications 🔔</font></h1></center>
         <br><br>
         <table class="table table-bordered">
@@ -115,7 +94,6 @@ if (isset($_POST['sendMessage'])) {
                 <tr>
                     <th>notification</th>
                     <th>time</th>
-                    <th>date</th>
                 </tr>
             </thead>
             <tbody>
@@ -123,7 +101,6 @@ if (isset($_POST['sendMessage'])) {
                     <tr>
                         <td><?php echo "message from {$chat['sender_mail']}: {$chat['message']}"; ?></td>
                         <td><?php echo $chat['time']; ?></td>
-                        <td><?php echo $chat['date']; ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -152,28 +129,13 @@ end; $BODY$
   LANGUAGE plpgsql VOLATILE
   COST 100</pre></p>
 
-    <p style="background-color: grey; color: yellow">select ads.ad_id, ads.title, ads.poster_mail from ads where approver_mail is null order by date asc, time asc;</p>
+    <p style="background-color: grey; color: yellow">select ads.ad_id, ads.title, ads.poster_mail from ads where approver_mail is null order by time asc;</p>
     <center><h1><font color="red">Ads waiting approval 😋</font></h1></center>
     <br><br>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>ad_id</th>
-                <th>title</th>
-                <th>poster_mail</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php $approveds = $epdo->getQueryResults("select ads.ad_id, ads.title, ads.poster_mail from ads where approver_mail is null order by date asc, time asc;"); ?>
-            <?php foreach ($approveds as $approved) : ?>
-                <tr>
-                    <td><a href="showAd.php?adid=<?php echo($approved['ad_id']); ?>"><?php echo "{$approved['ad_id']}"; ?></a></td>
-                    <td><?php echo $approved['title']; ?></td>
-                    <td><?php echo $approved['poster_mail']; ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <?php
+        $pendings = $epdo->getQueryResults("select ads.ad_id, ads.title, ads.poster_mail from ads where approver_mail is null order by time asc;");
+        $epdo->showAll($pendings);
+    ?>
 
     <br><br>
     <br><br>
@@ -181,144 +143,53 @@ end; $BODY$
     <p style="background-color: grey; color: yellow">select reported_ad_id, count(*) report_cnt from reports group by reported_ad_id order by report_cnt desc;</p>
     <center><h1><font color="red">Most reported ads ⚠</font></h1></center>
     <br><br>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>ad_id</th>
-                <th>report_cnt</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php $mostReporteds = $epdo->getQueryResults("select reported_ad_id, count(*) report_cnt from reports group by reported_ad_id order by report_cnt desc;"); ?>
-            <?php foreach ($mostReporteds as $mostReported) : ?>
-                <tr>
-                    <td><a href="showAd.php?adid=<?php echo($mostReported['reported_ad_id']); ?>"><?php echo "{$mostReported['reported_ad_id']}"; ?></a></td>
-                    <td><?php echo $mostReported['report_cnt']; ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <?php
+        $mostReporteds = $epdo->getQueryResults("select reported_ad_id, count(*) report_cnt from reports group by reported_ad_id order by report_cnt desc;");
+        $epdo->showAll($mostReporteds);
+    ?>
 
     <br><br>
     <br><br>
 
-    <p style="background-color: grey; color: yellow">select ads.ad_id, ads.title, ads.poster_mail from ads where coalesce(approver_mail,'null')='{$_SESSION['email']}' order by date desc, time desc;</p>
+    <p style="background-color: grey; color: yellow">select ads.ad_id, ads.title, ads.poster_mail from ads where coalesce(approver_mail,'null')='{$_SESSION['email']}' order by time desc;</p>
     <center><h1><font color="orange">Your approved ads 👍</font></h1></center>
     <br><br>
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>ad_id</th>
-                <th>title</th>
-                <th>poster_mail</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php $approveds = $epdo->getQueryResults("select ads.ad_id, ads.title, ads.poster_mail from ads where coalesce(approver_mail,'null')='{$_SESSION['email']}' order by date desc, time desc;"); ?>
-            <?php foreach ($approveds as $approved) : ?>
-                <tr>
-                    <td><a href="showAd.php?adid=<?php echo($approved['ad_id']); ?>"><?php echo "{$approved['ad_id']}"; ?></a></td>
-                    <td><?php echo $approved['title']; ?></td>
-                    <td><?php echo $approved['poster_mail']; ?></td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
-
-<?php } ?>
+<?php
+    $approveds = $epdo->getQueryResults("select ads.ad_id, ads.title, ads.poster_mail from ads where coalesce(approver_mail,'null')='{$_SESSION['email']}' order by time desc;");
+    $epdo->showAll($approveds);
+} ?>
 
         <br><br>
         <br><br>
 
-        <p style="background-color: grey; color: yellow">select r.ad_id, r.title, l."time", l."date" from<br>
+        <p style="background-color: grey; color: yellow">select r.ad_id, r.title, l."time" starring_time from<br>
  (select * from stars where<br>
  stars.starrer_mail='{$_SESSION['email']}') l left join<br>
  (select ads.ad_id, ads.title from ads) r on (l.starred_ad_id=r.ad_id)<br>
- order by l.date desc, l.time desc;</p>
+ order by starring_time desc;</p>
         <center><h1><font color="green">Your favorite ads 💜</font></h1></center>
         <br><br>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ad_id</th>
-                    <th>title</th>
-                    <th>starring_time</th>
-                    <th>starring_date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($favorites as $favorite) : ?>
-                    <tr>
-                        <td><a href="showAd.php?adid=<?php echo($favorite['ad_id']); ?>"><?php echo "{$favorite['ad_id']}"; ?></a></td>
-                        <td><?php echo $favorite['title']; ?></td>
-                        <td><?php echo $favorite['time']; ?></td>
-                        <td><?php echo $favorite['date']; ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <?php $epdo->showAll($favorites); ?>
 
         <br><br>
         <br><br>
 
-        <p style="background-color: grey; color: yellow">select ads.ad_id, ads.title, ads."time", ads."date" from ads where poster_mail='{$_SESSION['email']}' order by ads."date" desc, ads."time" desc;</p>
+        <p style="background-color: grey; color: yellow">select ads.ad_id, ads.title, ads."time" from ads where poster_mail='{$_SESSION['email']}' order by ads."time" desc;</p>
         <center><h1><font color="yellow">Your posted ads 🙂</font></h1></center>
         <br><br>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ad_id</th>
-                    <th>title</th>
-                    <th>time</th>
-                    <th>date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($posteds as $posted) : ?>
-                    <tr>
-                        <td><a href="showAd.php?adid=<?php echo($posted['ad_id']); ?>"><?php echo "{$posted['ad_id']}"; ?></a></td>
-                        <td><?php echo $posted['title']; ?></td>
-                        <td><?php echo $posted['time']; ?></td>
-                        <td><?php echo $posted['date']; ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <?php $epdo->showAll($posteds); ?>
 
         <br><br>
         <br><br>
 
-        <p style="background-color: grey; color: yellow">select r.ad_id, r.title, l.report_type, l.message, l."time", l."date" from<br>
+        <p style="background-color: grey; color: yellow">select r.ad_id, r.title, l.report_type, l.message, l."time" reporting_time from<br>
  (select * from reports where<br>
  reports.reporter_mail='{$_SESSION['email']}') l left join<br>
  (select ads.ad_id, ads.title from ads) r on (l.reported_ad_id=r.ad_id)<br>
- order by l.date desc, l.time desc;</p>
+ order by reporting_time desc;</p>
         <center><h1><font color="red">Your reported ads 😠</font></h1></center>
         <br><br>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>ad_id</th>
-                    <th>title</th>
-                    <th>report_type</th>
-                    <th>message</th>
-                    <th>reporting_time</th>
-                    <th>reporting_date</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($reporteds as $reported) : ?>
-                    <tr>
-                        <td><a href="showAd.php?adid=<?php echo($reported['ad_id']); ?>"><?php echo "{$reported['ad_id']}"; ?></a></td>
-                        <td><?php echo $reported['title']; ?></td>
-                        <td><?php echo $reported['report_type']; ?></td>
-                        <td><?php echo $reported['message']; ?></td>
-                        <td><?php echo $reported['time']; ?></td>
-                        <td><?php echo $reported['date']; ?></td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <?php $epdo->showAll($reporteds); ?>
     </div>
 
     <br><br>
@@ -421,9 +292,9 @@ if ($isAdmin) {
         <br><br><br>
 
         email: <input type="text" name="mail">
-        <br><br><p style="background-color: grey; color: yellow">select chats.sender_mail, chats.receiver_mail, chats.message, chats."time", chats."date" from chats where<br>
+        <br><br><p style="background-color: grey; color: yellow">select chats.sender_mail, chats.receiver_mail, chats.message, chats."time" from chats where<br>
  (chats.sender_mail='{$_SESSION['email']}' and chats.receiver_mail='{$_POST['mail']}') or (chats.sender_mail='{$_POST['mail']}' and chats.receiver_mail='{$_SESSION['email']}')<br>
- order by chats."date" desc, chats."time" desc;</p>
+ order by chats."time" desc;</p>
         <input type="submit" class="btn btn-info" name="showChats" value="See chats with user with this email">
         <br><br>message: <textarea name="messageUser" rows="5" cols="40"></textarea>
 

@@ -29,22 +29,22 @@
     declare
         cnt int;
     begin
-        update ads set(ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail, "time", "date") =
-        (_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price, _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad."time", _ad."date") where ad_id=_ad.ad_id;
+        update ads set(ad_id, buy_or_sell, poster_phone, price, is_negotiable, title, details, category, subcategory, "location", sublocation, poster_mail, approver_mail, image_path, "time") =
+        (_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price, _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad.image_path, _ad."time") where ad_id=_ad.ad_id;
         GET DIAGNOSTICS cnt = ROW_COUNT;
         return cnt;
     end; $BODY$
       LANGUAGE plpgsql VOLATILE
       COST 100</pre></p>
-    <h3>Edit mobile ad function:</h3><p><pre style="background-color: grey; color: yellow">
-    CREATE OR REPLACE FUNCTION "public"."edit_mobile_ad"("_mobile_ad" "public"."mobile_ads_view")
+    <h3>Edit mobile phone ad function:</h3><p><pre style="background-color: grey; color: yellow">
+    CREATE OR REPLACE FUNCTION "public"."edit_mobile_phone_ad"("_ad" "public"."mobile_phone_ads_view")
       RETURNS "pg_catalog"."int4" AS $BODY$
     declare
         cnt int;
     begin
-        perform edit_ad(row(_mobile_ad.ad_id, _mobile_ad.buy_or_sell, _mobile_ad.poster_phone, _mobile_ad.price, _mobile_ad.is_negotiable, _mobile_ad.title, _mobile_ad.details, _mobile_ad.category, _mobile_ad.subcategory, _mobile_ad."location", _mobile_ad.sublocation, _mobile_ad.poster_mail, _mobile_ad.approver_mail, _mobile_ad."time", _mobile_ad."date"));
-        update mobile_ads set(brand, model, edition, features, authenticity, "condition") =
-        (_mobile_ad.brand, _mobile_ad.model, _mobile_ad.edition, _mobile_ad.features, _mobile_ad.authenticity, _mobile_ad.condition) where ad_id=_mobile_ad.ad_id;
+        perform edit_ad(row(_ad.ad_id, _ad.buy_or_sell, _ad.poster_phone, _ad.price, _ad.is_negotiable, _ad.title, _ad.details, _ad.category, _ad.subcategory, _ad."location", _ad.sublocation, _ad.poster_mail, _ad.approver_mail, _ad.image_path, _ad."time"));
+        update mobile_phone_ads set(brand, model, edition, features, authenticity, "condition") =
+        (_ad.brand, _ad.model, _ad.edition, _ad.features, _ad.authenticity, _ad.condition) where ad_id=_ad.ad_id;
         GET DIAGNOSTICS cnt = ROW_COUNT;
         return cnt;
     end; $BODY$
@@ -71,15 +71,9 @@ try {
     if ($ad['category']=='electronics') {
         $str = "select * from electronics_ads_view v where v.ad_id={$_GET['adid']};";
         $str2 = "edit_electronics_ad";
-    } elseif ($ad['subcategory']=='car') {
-        $str = "select * from car_ads_view v where v.ad_id={$_GET['adid']};";
-        $str2 = "edit_car_ad";
-    } elseif ($ad['subcategory']=='motor_cycle') {
-        $str = "select * from motor_cycle_ads_view v where v.ad_id={$_GET['adid']};";
-        $str2 = "edit_motor_cycle_ad";
-    } elseif ($ad['subcategory']=='mobile_phone') {
-        $str = "select * from mobile_ads_view v where v.ad_id={$_GET['adid']};";
-        $str2 = "edit_mobile_ad";
+    } elseif ($ad['subcategory']!='others') {
+        $str = "select * from {$ad['subcategory']}_ads_view v where v.ad_id={$_GET['adid']};";
+        $str2 = "edit_{$ad['subcategory']}_ad";
     }
     $ad = $epdo->getQueryResults($str)[0];
     if (isset($_POST['saveEdit'])) {
@@ -90,7 +84,7 @@ try {
             else $param = $param.'\''.str_replace("'", "''", $_POST[$key]).'\'';
         }
         $param = $param.')';
-        // echo $param;
+        // echo "{$str2}({$param})";
         if (isset($str2)) {
             $epdo->getFromWhere("{$str2}({$param})");
         }
@@ -108,7 +102,7 @@ try {
 <?php
 foreach ($ad as $key => $value) {
     echo "{$key} => ";
-    if ($key=='ad_id'or $key=='category'or $key=='subcategory' or $key=='poster_mail' or $key=='approver_mail' or $key=='time' or $key=='date') {
+    if ($key=='ad_id'or $key=='category'or $key=='subcategory' or $key=='poster_mail' or $key=='approver_mail' or $key=='time' or $key=='image_path') {
         if (is_bool($value)) var_export($value); else echo "{$value}";  // u can't access labels via $_POST
 ?>
         <input type="hidden" name="<?php echo($key); ?>" value="<?php if (is_bool($value)) var_export($value); else echo "{$value}"; ?>">

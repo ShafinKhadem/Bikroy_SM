@@ -5,6 +5,8 @@ use BikroySM\Connection as Connection;
 
 try {
     $epdo = Connection::get()->connect();
+
+    // the next section of this try block just acts as server for ajax.
     if (isset($_POST['postAd'])) {  // eita na dile tui form submit korte parbi na.
         goto skipTry;
     }
@@ -22,9 +24,6 @@ try {
             exit();
         }
         $str = $_POST['subcategory'].'_ads';
-        if ($_POST['subcategory']=='mobile_phone') {
-            $str = 'mobile_ads';
-        }
         if ($_POST['category']=='electronics') {
             $str = 'electronics_ads';
         }
@@ -98,6 +97,55 @@ try {
 
 session_start();
 
+$target_file = "";
+
+function uploadImage() {
+    global $target_file;
+
+    $target_dir = "tmp/";
+    $target_file = $target_dir . basename($_FILES["fileToUpload"]["name"]);
+    $uploadOk = 1;
+    $imageFileType = strtolower(pathinfo($target_file,PATHINFO_EXTENSION));
+    // Check if image file is a actual image or fake image
+    $check = getimagesize($_FILES["fileToUpload"]["tmp_name"]);
+    if($check !== false) {
+        echo "File is an image - " . $check["mime"] . ".";
+        $uploadOk = 1;
+    } else {
+        echo "File is not an image.";
+        $uploadOk = 0;
+    }
+    // Check if file already exists
+    if (file_exists($target_file)) {
+        echo "Sorry, invalid filename. A file with same name has already been uploaded.";
+        $uploadOk = 0;
+    }
+    // Check file size is <= 500 KB
+    if ($_FILES["fileToUpload"]["size"] > 500000) {
+        echo "Sorry, your file is too large.";
+        $uploadOk = 0;
+    }
+    // Allow certain file formats
+    if($imageFileType != "jpg" && $imageFileType != "png" && $imageFileType != "jpeg") {
+        echo "Sorry, only JPG, JPEG, PNG files are allowed.";
+        $uploadOk = 0;
+    }
+    // Check if $uploadOk is set to 0 by an error
+    if ($uploadOk != 0) {
+    // if everything is ok, try to upload file
+        if (move_uploaded_file($_FILES["fileToUpload"]["tmp_name"], $target_file)) {
+            echo "The file ". basename( $_FILES["fileToUpload"]["name"]). " has been uploaded.";
+        } else {
+            echo "Sorry, there was an error uploading your file.";
+            $uploadOk = 0;
+        }
+    }
+
+    if ($uploadOk == 0) {
+        exit();
+    }
+}
+
 if (empty($_SESSION['email'])) {
     header('location: signin.php');
 } else {
@@ -106,6 +154,7 @@ if (empty($_SESSION['email'])) {
 try {
 
     if (isset($_POST['postAd'])) {
+        uploadImage();
         $tit = str_replace("'", "'__'", $_POST['title']);
         $det = str_replace("'", "'__'", $_POST['details']);
         $str = "post_ad('{$_POST['buy_or_sell']}', '{$_POST['poster_phone']}', '{$_POST['price']}', '{$_POST['is_negotiable']}', '{$tit}'
@@ -114,6 +163,7 @@ try {
         $str = str_replace("'__'", "''", $str);
         echo $str;
         $adid = $epdo->getFromWhereVal($str);
+        rename($target_file, "uploads/{$adid}.png");
         if ($_POST['category']=='electronics') {
             $str = "insert into electronics_ads(ad_id, brand, model) values({$adid}, '{$_POST['brand']}', '{$_POST['model']}')";
         } elseif ($_POST['subcategory']=='car') {
@@ -125,7 +175,7 @@ try {
             ({$adid}, '{$_POST['bike_type']}', '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['model_year']}', '{$_POST['condition']}'
             , '{$_POST['engine_capacity']}', '{$_POST['kilometers_run']}')";
         } elseif ($_POST['subcategory']=='mobile_phone') {
-            $str = "insert into mobile_ads(ad_id, brand, model, edition, features, authenticity, \"condition\") values
+            $str = "insert into mobile_phone_ads(ad_id, brand, model, edition, features, authenticity, \"condition\") values
             ({$adid}, '{$_POST['brand']}', '{$_POST['model']}', '{$_POST['edition']}', '{$_POST['features']}', '{$_POST['authenticity']}', '{$_POST['condition']}')";
         }
         if ($_POST['category']!='others') {
@@ -135,6 +185,7 @@ try {
         }
         header('location: user.php');
     }
+
 } catch (\PDOException $e) {
     echo $e->getMessage();
 }
@@ -142,7 +193,12 @@ try {
 ?>
 
     <h1><center>Posting ad form</center></h1><br><br>
-    <form method="post">
+
+    <form method="post" enctype="multipart/form-data">
+        Select image to upload (must be in png, jpg or jpeg format and size must not exceed 500 KB):
+        <br><br><label class="btn btn-warning">
+            Browse <input type="file" name="fileToUpload" id="fileToUpload">
+        </label><br><br>
 
         sell or buy:
         <input type="radio" name="buy_or_sell" value="1" <?php if(isset($_POST['buy_or_sell']) and $_POST['buy_or_sell']=='1')  echo 'checked="checked"';?> >sell
@@ -162,9 +218,7 @@ try {
         title: <input type="text" name="title" size="90" value="<?php if (isset($_POST['title'])) echo $_POST['title']; ?>"> <br>
 
         details:<br>
-        <textarea id="details" name="details"  rows="10" cols="100"><?php if(isset($_POST['details'])) echo htmlentities ($_POST['details']); ?></textarea>
-
-        <br>
+        <textarea id="details" name="details"  rows="10" cols="100"><?php if(isset($_POST['details'])) echo htmlentities ($_POST['details']); ?></textarea><br>
 
         <br><br>
 <script>

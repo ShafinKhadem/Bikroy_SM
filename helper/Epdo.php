@@ -145,4 +145,39 @@ class Epdo {
         $stmt->setFetchMode(\PDO::FETCH_ASSOC);
         return $stmt->fetchColumn(0);
     }
+
+
+
+    public function showAll($rows) {
+        if (!isset($rows[0])) {
+            echo "empty table";
+        } else {
+    ?>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <?php foreach ($rows[0] as $key => $value) : ?>
+                            <th><?php echo "{$key}"; ?></th>
+                        <?php endforeach; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($rows as $row) : ?>
+                        <tr>
+                            <?php foreach ($row as $key => $value) : ?>
+                                <td>
+                                <?php
+                                    if ($key=='ad_id') :?> <a href="showAd.php?adid=<?php echo($row['ad_id']); ?>"><?php echo "{$row['ad_id']}"; ?></a><?php
+                                    elseif (is_bool($value)): var_export($value);    // otherwise boolean false is shown as empty string.
+                                    else: echo "{$value}";
+                                    endif;
+                                ?> </td>
+                            <?php endforeach; ?>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+    <?php
+        }
+    }
 }

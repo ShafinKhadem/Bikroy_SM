@@ -6,6 +6,8 @@
 </head>
 <body>
 
+<a href="index.php">Home page</a><br><br>
+
 <?php
 
 require 'vendor/autoload.php';
@@ -18,9 +20,9 @@ function showAds($ads) {
         <thead>
             <tr>
                 <th>ad_id</th>
+                <th>image</th>
                 <th>title</th>
                 <th>price</th>
-                <th>posting date</th>
                 <th>posting time</th>
                 <th>category</th>
                 <th>subcategory</th>
@@ -32,9 +34,9 @@ function showAds($ads) {
             <?php foreach ($ads as $ad) : ?>
                 <tr>
                     <td><a href="showAd.php?adid=<?php echo($ad['ad_id']); ?>"><?php echo "{$ad['ad_id']}"; ?></a></td>
+                    <td><img src="<?php echo("uploads/{$ad['ad_id']}.png"); ?>" height="80" width="80">
                     <td><?php echo $ad['title']; ?></td>
                     <td><?php echo $ad['price']; ?></td>
-                    <td><?php echo $ad['date']; ?></td>
                     <td><?php echo $ad['time']; ?></td>
                     <td><?php echo $ad['category']; ?></td>
                     <td><?php echo $ad['subcategory']; ?></td>
@@ -86,8 +88,8 @@ try {
     Sort results by:
     <select name="sort">
         <option value="random" <?php if (isset($_POST['sort']) and $_POST['sort']=="random") { ?>selected="true" <?php }; ?> >random order</option>
-        <option value="date desc, time desc" <?php if (isset($_POST['sort']) and $_POST['sort']=="date desc, time desc") { ?>selected="true" <?php }; ?> >Time: newest on top</option>
-        <option value="date asc, time asc" <?php if (isset($_POST['sort']) and $_POST['sort']=="date asc, time asc") { ?>selected="true" <?php }; ?> >Time: oldest on top</option>
+        <option value="time desc" <?php if (isset($_POST['sort']) and $_POST['sort']=="time desc") { ?>selected="true" <?php }; ?> >Time: newest on top</option>
+        <option value="time asc" <?php if (isset($_POST['sort']) and $_POST['sort']=="time asc") { ?>selected="true" <?php }; ?> >Time: oldest on top</option>
         <option value="price asc" <?php if (isset($_POST['sort']) and $_POST['sort']=="price asc") { ?>selected="true" <?php }; ?> >Price: low to high</option>
         <option value="price desc" <?php if (isset($_POST['sort']) and $_POST['sort']=="price desc") { ?>selected="true" <?php }; ?> >Price: high to low</option>
     </select>
