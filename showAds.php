@@ -98,12 +98,18 @@ try {
     <h4>Filter results by:</h4>
 
     location:
-    <input type="radio" name="location" value="any" <?php if(isset($_POST['location']) and $_POST['location']=='any')  echo 'checked="checked"';?> >any
+    <div class="custom-control custom-control-inline custom-radio ml-3">
+        <input type="radio" id="any" name="location" class="custom-control-input" value="any" <?php if(isset($_POST['location']) and $_POST['location']=='any')  echo 'checked="checked"';?> >
+        <label class="custom-control-label" for="any">any</label>
+    </div>
 <?php
 $locations = $epdo->getFromWhereCol('get_locations()');
 foreach ($locations as $location) {
 ?>
-    <input type="radio" name="location" value="<?php echo($location); ?>" <?php if(isset($_POST['location']) and $_POST['location']==$location)  echo 'checked="checked"';?> ><?php echo $location; ?>
+    <div class="custom-control custom-control-inline custom-radio">
+        <input type="radio" id="<?php echo($location); ?>" name="location" class="custom-control-input" value="<?php echo($location); ?>" <?php if(isset($_POST['location']) and $_POST['location']==$location)  echo 'checked="checked"';?> >
+        <label class="custom-control-label" for="<?php echo($location); ?>"><?php echo $location; ?></label>
+    </div>
 <?php
 }
 ?>

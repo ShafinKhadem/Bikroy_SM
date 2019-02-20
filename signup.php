@@ -6,6 +6,20 @@
 </head>
 <body>
 
+<script>
+    function validate(caller) {
+        if (caller['pswrd'].value!=caller['pswrd2'].value) {
+            event.preventDefault();
+            var table = caller.childNodes[1];   // table is not a form element unlike input types.
+            var row = table.insertRow(-1);
+            var cell0 = row.insertCell(0);
+            var cell1 = row.insertCell(1);
+            cell1.innerHTML = "<font color='red'>Passwords don't match :)</font>";
+            return 0;
+        }
+    }
+</script>
+
 <?php
 
 require_once 'vendor/autoload.php';
@@ -15,7 +29,7 @@ use BikroySM\Connection as Connection;
 try {
     $epdo = Connection::get()->connect();
 
-    if (isset($_POST['signup']) and isset($_POST['agree']) and !empty($_POST['mail']) and filter_var($_POST['mail'], FILTER_VALIDATE_EMAIL) and isset($_POST['name']) and strlen($_POST['pswrd'])>=8) {
+    if (isset($_POST['signup'])) {
         $epdo->getQueryResults("INSERT INTO users(email, name, password) VALUES('{$_POST['mail']}', '{$_POST['name']}', '{$_POST['pswrd']}');");
         header('location: signin.php');
         exit();
@@ -26,50 +40,30 @@ try {
 
 ?>
 
-
-
 <h1><center>User registration form</center></h1>
 <br><br>
-<form method="post">
-    <table align="center">
+<form class="was-validated" method="post" id="registrationForm" onsubmit="validate(this);">
+    <table name="tbl" id="tbl" align="center">
         <tr><td>EMAIL</td>
-            <td><input type="text" name="mail"></td></tr>
+            <td><input type="email" name="mail" required></td></tr>
         <tr><td>NAME</td>
-            <td><input type="text" name="name" value="anonymous"></td></tr>
+            <td><input type="text" name="name" value="anonymous" required></td></tr>
         <tr><td>PASSWORD</td>
-            <td><input type="text" name="pswrd"></td></tr>
+            <td><input type="password" name="pswrd" pattern=".{8,}" required title="min 8 character"></td></tr>
+        <tr><td>retype PASSWORD</td>
+            <td><input type="password" name="pswrd2" pattern=".{8,}" required title="both passwords must match"></td></tr>
         <tr><td>&nbsp;</td><td></td></tr>
-        <tr><td>Agree to Terms of Service: </td>
-            <td><input type="checkbox" name="agree"></td></tr>
-        <?php
-        if (isset($_POST['signup'])) {
-            // insert a user into the users table
-            if (!isset($_POST['agree'])) {
-        ?>
-                <tr><td></td><td><font color="red">You must agree to terms of service</font></td></tr>
-        <?php
-            }
-            if (empty($_POST['mail']) or !filter_var($_POST['mail'], FILTER_VALIDATE_EMAIL)) {
-        ?>
-                <tr><td></td><td><font color="red">You must enter a valid email id</font></td></tr>
-        <?php
-            }
-            if (strlen($_POST['pswrd'])<8) {
-        ?>
-                <tr><td></td><td><font color="red">You must enter password with at least 8 character</font></td></tr>
-        <?php
-            }
-            if (empty($_POST['name'])) {
-        ?>
-                <tr><td></td><td><font color="red">You must enter name with at least 1 character</font></td></tr>
-        <?php
-            }
-        }
-        ?>
+        <tr><td>
+            <div class="custom-control custom-checkbox mb-3">
+                <input type="checkbox" class="custom-control-input" name="agree" id="agree" required>
+                <label class="custom-control-label" for="agree">Agree to Terms of Service.</label>
+                <div class="invalid-feedback">You must agree :)</div>
+            </div>
+        </td></tr>
         <tr><td></td>
             <td><input type="submit" class="btn btn-info" name="signup" value="Sign up"></td></tr>
     </table>
-    <p style="background-color: grey; color: yellow">INSERT INTO users(email, name, password) VALUES('{$_POST['mail']}', '{$_POST['name']}', '{$_POST['pswrd']}');</p>
+    <br><p style="background-color: grey; color: yellow">INSERT INTO users(email, name, password) VALUES('{$_POST['mail']}', '{$_POST['name']}', '{$_POST['pswrd']}');</p>
 </form>
 </body>
 </html>

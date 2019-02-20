@@ -40,7 +40,10 @@ try {
         $subcategories = $epdo->getFromWhereCol("get_subcategories('{$_POST['category']}')");
         foreach ($subcategories as $subcategory) {
     ?>
-            <input type="radio" name="subcategory" onclick="getAttrs(this)" value="<?php echo($subcategory); ?>" <?php if(isset($_POST['subcategory']) and $_POST['subcategory']==$subcategory)  echo 'checked="checked"';?> ><?php echo $subcategory; ?>
+            <div class="custom-control custom-control-inline custom-radio">
+                <input type="radio" class="custom-control-input" name="subcategory" onclick="getAttrs(this)" value="<?php echo($subcategory); ?>" id="<?php echo($subcategory); ?>" required>
+                <label class="custom-control-label" for="<?php echo($subcategory); ?>"><?php echo($subcategory); ?></label>
+            </div>
     <?php
         }
         exit();
@@ -194,30 +197,50 @@ try {
 
     <h1><center>Posting ad form</center></h1><br><br>
 
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data" class="was-validated">
         Select image to upload (must be in png, jpg or jpeg format and size must not exceed 500 KB):
         <br><br><label class="btn btn-warning">
             Browse <input type="file" name="fileToUpload" id="fileToUpload">
         </label><br><br>
 
         sell or buy:
-        <input type="radio" name="buy_or_sell" value="1" <?php if(isset($_POST['buy_or_sell']) and $_POST['buy_or_sell']=='1')  echo 'checked="checked"';?> >sell
-        <input type="radio" name="buy_or_sell" value="0" <?php if(isset($_POST['buy_or_sell']) and $_POST['buy_or_sell']=='0')  echo 'checked="checked"';?> >buy
+        <div class="custom-control custom-control-inline custom-radio ml-3">
+            <input type="radio" class="custom-control-input" id="sell" name="buy_or_sell" value="1" required>
+            <label class="custom-control-label" for="sell">sell</label>
+        </div>
+        <div class="custom-control custom-control-inline custom-radio mb-3">
+            <input type="radio" class="custom-control-input" id="buy" name="buy_or_sell" value="0" required>
+            <label class="custom-control-label" for="buy">buy</label>
+            <div class="invalid-feedback ml-3">You must select one</div>
+        </div>
 
         <br>
 
-        poster_phone: <input type="text" name="poster_phone" value="<?php if (isset($_POST['poster_phone'])) echo $_POST['poster_phone']; ?>"> <br>
-        price: <input type="text" name="price" value="<?php if (isset($_POST['price'])) echo $_POST['price']; ?>">
+        <div class="input-group mb-3">poster_phone:
+        <input type="text" name="poster_phone" class="form-control ml-3 col-3"></div>
+        <div class="input-group mb-3">price:
+        <input type="text" name="price" class="form-control ml-3 col-3"></div>
 
         is_negotiable:
-        <input type="radio" name="is_negotiable" value="1" <?php if(isset($_POST['is_negotiable']) and $_POST['is_negotiable']=='1')  echo 'checked="checked"';?> >Yes
-        <input type="radio" name="is_negotiable" value="0" <?php if(isset($_POST['is_negotiable']) and $_POST['is_negotiable']=='0')  echo 'checked="checked"';?> >No
+        <div class="custom-control custom-control-inline custom-radio ml-3">
+            <input type="radio" class="custom-control-input" id="Yes" name="is_negotiable" value="1" required>
+            <label class="custom-control-label" for="Yes">Yes</label>
+        </div>
+        <div class="custom-control custom-control-inline custom-radio mb-3">
+            <input type="radio" class="custom-control-input" id="No" name="is_negotiable" value="0" required>
+            <label class="custom-control-label" for="No">No</label>
+            <div class="invalid-feedback ml-3">You must select one</div>
+        </div>
 
         <br>
 
-        title: <input type="text" name="title" size="90" value="<?php if (isset($_POST['title'])) echo $_POST['title']; ?>"> <br>
+        <div class="input-group mb-3">
+            <label for="title">Title: </label>
+            <input type="text" name="title" size="90" class="form-control ml-3" id="title" required>
+            <div class="invalid-tooltip"> Please provide a non-empty title. </div>
+        </div>
 
-        details:<br>
+        <br>details:<br>
         <textarea id="details" name="details"  rows="10" cols="100"><?php if(isset($_POST['details'])) echo htmlentities ($_POST['details']); ?></textarea><br>
 
         <br><br>
@@ -267,7 +290,7 @@ try {
 $locations = $epdo->getFromWhereCol('get_locations()');
 foreach ($locations as $location) {
 ?>
-    <input type="radio" name="location" onclick="ajax(this, 'loc', 'sublocs')" value="<?php echo($location); ?>" <?php if(isset($_POST['location']) and $_POST['location']==$location)  echo 'checked="checked"';?> ><?php echo $location; ?>
+    <input type="radio" name="location" onclick="ajax(this, 'loc', 'sublocs')" value="<?php echo($location); ?>"><?php echo $location; ?>
 <?php
 }
 ?>
@@ -284,7 +307,10 @@ foreach ($locations as $location) {
 $categories = $epdo->getFromWhereCol('get_categories()');
 foreach ($categories as $category) {
 ?>
-    <input type="radio" name="category" onclick="ajax(this, 'category', 'subcats')" value="<?php echo($category); ?>" <?php if(isset($_POST['category']) and $_POST['category']==$category)  echo 'checked="checked"';?> ><?php echo $category; ?>
+    <div class="custom-control custom-control-inline custom-radio">
+        <input type="radio" class="custom-control-input" name="category" onclick="ajax(this, 'category', 'subcats')" value="<?php echo($category); ?>" id="<?php echo($category); ?>" required>
+        <label class="custom-control-label" for="<?php echo($category); ?>"><?php echo $category; ?></label>
+    </div>
 <?php
 }
 ?>
